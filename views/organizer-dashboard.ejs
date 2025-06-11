@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF Organizer Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 2em; color: #00ff00; font-weight: bold; }
+        .leaderboard { background: #2d2d2d; border-radius: 8px; margin: 20px 0; }
+        .leaderboard-container { display: flex; }
+        .fixed-columns { flex-shrink: 0; }
+        .scrollable-columns { flex-grow: 1; overflow-x: auto; }
+        
+        .fixed-table, .scrollable-table { border-collapse: collapse; table-layout: fixed; }
+        .fixed-table { width: 530px; }
+        .scrollable-table { width: 100%; min-width: max-content; }
+        
+        .leaderboard th, .leaderboard td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #444; 
+            white-space: nowrap; 
+            vertical-align: top;
+            box-sizing: border-box;
+        }
+        .leaderboard th { background: #333; color: #00ff00; }
+        .leaderboard tr:hover td { background: #333; }
+        
+        .solved { color: #00ff00; font-weight: bold; }
+        .unsolved { color: #666; }
+        .refresh-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 10px 0; }
+        .challenge-header { 
+            writing-mode: vertical-rl; 
+            text-orientation: mixed; 
+            min-width: 40px; 
+            height: 180px;
+            overflow: hidden;
+            padding: 25px;
+        }
+        
+        /* Fixed columns styling */
+        .fixed-columns th:nth-child(1), .fixed-columns td:nth-child(1) { width: 60px; }
+        .fixed-columns th:nth-child(2), .fixed-columns td:nth-child(2) { width: 160px; }
+        .fixed-columns th:nth-child(3), .fixed-columns td:nth-child(3) { width: 80px; }
+        .fixed-columns th:nth-child(4), .fixed-columns td:nth-child(4) { width: 80px; }
+        .fixed-columns th:nth-child(5), .fixed-columns td:nth-child(5) { width: 150px; border-right: 2px solid #444; }
+        
+        /* Scrollable columns styling */
+        .scrollable-columns th, .scrollable-columns td { 
+            min-width: 40px; 
+            text-align: left;
+            vertical-align: middle;
+            padding-left: 25px;
+        }
+        .scrollable-columns th { 
+            vertical-align: bottom; 
+        }
+        
+        /* Ensure both tables have synchronized rows */
+        .fixed-table tbody tr, .scrollable-table tbody tr { height: 62px; }
+        .fixed-table thead tr, .scrollable-table thead tr { height: 180px; }
+        .fixed-table th, .fixed-table td { height: inherit; }
+        .scrollable-table th, .scrollable-table td { height: inherit; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h1 style="margin: 0;">🏆 CTF Organizer Dashboard</h1>
+                <div>
+                    <button class="refresh-btn" onclick="logout()" style="background: #ff4444;">🚪 Logout</button>
+                </div>
+            </div>
+            <div style="text-align: center; color: #888; margin-bottom: 20px;">
+                Welcome, <%= organizer.name %>
+            </div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <a href="/organizer/challenges?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">🎯 Manage Challenges</a>
+                <a href="/organizer/participants?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">👥 Manage Participants</a>
+                <a href="/organizer/submissions?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">📝 Manage Submissions</a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number"><%= participants.length %></div>
+                <div>Participants</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= challenges.length %></div>
+                <div>Challenges</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= participants.reduce((sum, p) => sum + (p.solved_challenges || 0), 0) %></div>
+                <div>Total Solves</div>
+            </div>
+        </div>
+
+        <div class="leaderboard">
+            <div class="leaderboard-container">
+                <!-- Fixed columns -->
+                <div class="fixed-columns">
+                    <table class="fixed-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Participant</th>
+                                <th>Points</th>
+                                <th>Solved</th>
+                                <th>Last Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% participants.forEach(function(participant, index) { %>
+                              <tr>
+                                <td><%= index + 1 %></td>
+                                <td>
+                                  <strong><%= participant.name %></strong><br>
+                                </td>
+                                <td><strong><%= participant.total_points || 0 %></strong></td>
+                                <td><%= participant.solved_challenges || 0 %>/<%= challenges.length %></td>
+                                <td><%= participant.last_submission ? '' : 'Never' %><% if (participant.last_submission) { %><span class="relative-time" data-timestamp="<%= participant.last_submission %>"></span><% } %></td>
+                              </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Scrollable columns -->
+                <div class="scrollable-columns">
+                    <table class="scrollable-table">
+                        <thead>
+                            <tr>
+                                <% challenges.forEach(function(challenge) { %>
+                                  <th class="challenge-header"><%= challenge.name %></th>
+                                <% }); %>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% participants.forEach(function(participant, index) { %>
+                              <tr>
+                                <% challenges.forEach(function(challenge) { 
+                                  const solved = progressMatrix[participant.token] && progressMatrix[participant.token][challenge.id];
+                                %>
+                                  <td class="<%= solved ? 'solved' : 'unsolved' %>"><%= solved ? '✓' : '✗' %></td>
+                                <% }); %>
+                              </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getRelativeTime(timestamp) {
+            const now = new Date();
+            // SQLite CURRENT_TIMESTAMP returns UTC, so treat the timestamp as UTC
+            const past = new Date(timestamp + 'Z');
+            const diffInSeconds = Math.floor((now - past) / 1000);
+            
+            if (diffInSeconds < 60) {
+                return diffInSeconds + ' secs';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return minutes + ' mins';
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return hours + ' hrs';
+            } else if (diffInSeconds < 2592000) {
+                const days = Math.floor(diffInSeconds / 86400);
+                return days + ' days';
+            } else {
+                const months = Math.floor(diffInSeconds / 2592000);
+                return months + ' months';
+            }
+        }
+        
+        function updateRelativeTimes() {
+            document.querySelectorAll('.relative-time').forEach(function(element) {
+                const timestamp = element.getAttribute('data-timestamp');
+                element.textContent = getRelativeTime(timestamp);
+            });
+        }
+        
+        function logout() {
+            window.location.href = '/organizer';
+        }
+        
+        // Update times on page load
+        updateRelativeTimes();
+        
+        // Update times every 30 seconds
+        setInterval(updateRelativeTimes, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF Submission Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
+        .nav-btn:hover { background: #777; }
+        .nav-btn.primary { background: #00ff00; color: #000; }
+        .nav-btn.primary:hover { background: #00cc00; }
+        .submission-form { background: #2d2d2d; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #00ff00; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .form-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+        .form-btn:hover { background: #00cc00; }
+        .form-btn.cancel { background: #666; color: #fff; }
+        .form-btn.cancel:hover { background: #777; }
+        .submissions-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
+        .submissions-table table { width: 100%; border-collapse: collapse; }
+        .submissions-table th, .submissions-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        .submissions-table th { background: #333; color: #00ff00; }
+        .submissions-table tr:hover { background: #333; }
+        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .edit-btn { background: #ff6b35; color: #fff; }
+        .delete-btn { background: #ff4444; color: #fff; }
+        .action-btn:hover { opacity: 0.8; }
+        .hidden { display: none; }
+        .correct { color: #00ff00; font-weight: bold; }
+        .incorrect { color: #ff4444; font-weight: bold; }
+        .flag { font-family: monospace; background: #1a1a1a; padding: 2px 4px; border-radius: 3px; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 120px; }
+        .stat-number { font-size: 1.5em; color: #00ff00; font-weight: bold; }
+        .filters { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .filter-group { display: inline-block; margin-right: 15px; }
+        .filter-group label { color: #00ff00; margin-right: 5px; }
+        .filter-group select { padding: 5px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .participant-name { color: #ff6b35; }
+        .challenge-name { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Submission Management</h1>
+            <div class="nav-buttons">
+                <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
+                <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Submission</button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.total_submissions %></div>
+                <div>Total Submissions</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.correct_submissions %></div>
+                <div>Correct</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.incorrect_submissions %></div>
+                <div>Incorrect</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= Math.round((stats.correct_submissions / stats.total_submissions * 100) || 0) %>%</div>
+                <div>Success Rate</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.participants_with_submissions %></div>
+                <div>Active Participants</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>Filter by Participant:</label>
+                <select id="participantFilter" onchange="filterTable()">
+                    <option value="">All Participants</option>
+                    <% [...new Set(submissions.map(s => s.participant_token))].forEach(function(token) { 
+                        const participant = submissions.find(s => s.participant_token === token);
+                    %>
+                        <option value="<%= token %>"><%= participant.participant_name %> (<%= token %>)</option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Filter by Challenge:</label>
+                <select id="challengeFilter" onchange="filterTable()">
+                    <option value="">All Challenges</option>
+                    <% [...new Set(submissions.map(s => s.challenge_id))].forEach(function(challengeId) { 
+                        const submission = submissions.find(s => s.challenge_id === challengeId);
+                    %>
+                        <option value="<%= challengeId %>"><%= submission.challenge_name %></option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Filter by Status:</label>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="1">Correct</option>
+                    <option value="0">Incorrect</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Create/Edit Form -->
+        <div id="submissionForm" class="submission-form hidden">
+            <h3 id="formTitle">Create New Submission</h3>
+            <form id="submissionFormElement">
+                <input type="hidden" id="submissionId" name="id">
+                <div class="form-group">
+                    <label for="participantToken">Participant</label>
+                    <select id="participantToken" name="participantToken" required>
+                        <option value="">Select Participant</option>
+                        <% participants.forEach(function(participant) { %>
+                            <option value="<%= participant.token %>"><%= participant.name %> (<%= participant.token %>)</option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="challengeId">Challenge</label>
+                    <select id="challengeId" name="challengeId" required>
+                        <option value="">Select Challenge</option>
+                        <% challenges.forEach(function(challenge) { %>
+                            <option value="<%= challenge.id %>"><%= challenge.name %> (<%= challenge.points %> pts)</option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="submittedFlag">Submitted Flag</label>
+                    <input type="text" id="submittedFlag" name="submittedFlag" placeholder="CTF{submitted_flag}" required>
+                </div>
+                <div class="form-group">
+                    <label for="isCorrect">Status</label>
+                    <select id="isCorrect" name="isCorrect" required>
+                        <option value="1">Correct</option>
+                        <option value="0">Incorrect</option>
+                    </select>
+                </div>
+                <button type="submit" class="form-btn" id="submitBtn">Create Submission</button>
+                <button type="button" class="form-btn cancel" onclick="hideForm()">Cancel</button>
+            </form>
+        </div>
+
+        <!-- Submissions Table -->
+        <div class="submissions-table">
+            <table id="submissionsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Participant</th>
+                        <th>Challenge</th>
+                        <th>Submitted Flag</th>
+                        <th>Correct Flag</th>
+                        <th>Status</th>
+                        <th>Points</th>
+                        <th>Submitted At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% submissions.forEach(function(submission) { %>
+                      <tr data-participant="<%= submission.participant_token %>" 
+                          data-challenge="<%= submission.challenge_id %>" 
+                          data-status="<%= submission.is_correct %>">
+                        <td><%= submission.id %></td>
+                        <td class="participant-name"><%= submission.participant_name %><br><small>(<%= submission.participant_token %>)</small></td>
+                        <td class="challenge-name"><%= submission.challenge_name %></td>
+                        <td><span class="flag"><%= submission.submitted_flag %></span></td>
+                        <td><span class="flag"><%= submission.correct_flag %></span></td>
+                        <td class="<%= submission.is_correct ? 'correct' : 'incorrect' %>">
+                            <%= submission.is_correct ? '✓ Correct' : '✗ Incorrect' %>
+                        </td>
+                        <td><%= submission.is_correct ? submission.points : 0 %></td>
+                        <td><%= new Date(submission.submitted_at).toLocaleString() %></td>
+                        <td>
+                            <button class="action-btn edit-btn" onclick="editSubmission(<%= submission.id %>, '<%= submission.participant_token %>', <%= submission.challenge_id %>, '<%= submission.submitted_flag.replace(/'/g, "\\'") %>', <%= submission.is_correct %>)">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteSubmission(<%= submission.id %>, '<%= submission.participant_name.replace(/'/g, "\\'") %>', '<%= submission.challenge_name.replace(/'/g, "\\'") %>')">Delete</button>
+                        </td>
+                      </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let isEditing = false;
+        const organizerToken = '<%= token %>';
+
+        function showCreateForm() {
+            document.getElementById('submissionForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Create New Submission';
+            document.getElementById('submitBtn').textContent = 'Create Submission';
+            document.getElementById('submissionFormElement').reset();
+            document.getElementById('submissionId').value = '';
+            isEditing = false;
+        }
+
+        function editSubmission(id, participantToken, challengeId, submittedFlag, isCorrect) {
+            document.getElementById('submissionForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Edit Submission';
+            document.getElementById('submitBtn').textContent = 'Update Submission';
+            document.getElementById('submissionId').value = id;
+            document.getElementById('participantToken').value = participantToken;
+            document.getElementById('challengeId').value = challengeId;
+            document.getElementById('submittedFlag').value = submittedFlag;
+            document.getElementById('isCorrect').value = isCorrect;
+            isEditing = true;
+        }
+
+        function hideForm() {
+            document.getElementById('submissionForm').classList.add('hidden');
+            document.getElementById('submissionFormElement').reset();
+            isEditing = false;
+        }
+
+        async function deleteSubmission(id, participantName, challengeName) {
+            if (confirm(`Are you sure you want to delete submission from "${participantName}" for "${challengeName}"?`)) {
+                try {
+                    const response = await fetch(`/api/submissions/${id}?token=${organizerToken}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Error deleting submission: ' + error.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting submission: ' + error.message);
+                }
+            }
+        }
+
+        function filterTable() {
+            const participantFilter = document.getElementById('participantFilter').value;
+            const challengeFilter = document.getElementById('challengeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const rows = document.querySelectorAll('#submissionsTable tbody tr');
+
+            rows.forEach(row => {
+                const participant = row.dataset.participant;
+                const challenge = row.dataset.challenge;
+                const status = row.dataset.status;
+
+                const showParticipant = !participantFilter || participant === participantFilter;
+                const showChallenge = !challengeFilter || challenge === challengeFilter;
+                const showStatus = !statusFilter || status === statusFilter;
+
+                if (showParticipant && showChallenge && showStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        document.getElementById('submissionFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submissionData = {
+                participantToken: formData.get('participantToken'),
+                challengeId: parseInt(formData.get('challengeId')),
+                submittedFlag: formData.get('submittedFlag'),
+                isCorrect: formData.get('isCorrect') === '1'
+            };
+
+            try {
+                let response;
+                if (isEditing) {
+                    const id = formData.get('id');
+                    response = await fetch(`/api/submissions/${id}?token=${organizerToken}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            submittedFlag: submissionData.submittedFlag,
+                            isCorrect: submissionData.isCorrect
+                        })
+                    });
+                } else {
+                    response = await fetch(`/api/submissions?token=${organizerToken}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(submissionData)
+                    });
+                }
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

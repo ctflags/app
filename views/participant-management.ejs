@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF Participant Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
+        .nav-btn:hover { background: #777; }
+        .nav-btn.primary { background: #00ff00; color: #000; }
+        .nav-btn.primary:hover { background: #00cc00; }
+        .participant-form { background: #2d2d2d; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #00ff00; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .form-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+        .form-btn:hover { background: #00cc00; }
+        .form-btn.cancel { background: #666; color: #fff; }
+        .form-btn.cancel:hover { background: #777; }
+        .participants-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
+        .participants-table table { width: 100%; border-collapse: collapse; }
+        .participants-table th, .participants-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        .participants-table th { background: #333; color: #00ff00; }
+        .participants-table tr:hover { background: #333; }
+        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .edit-btn { background: #ff6b35; color: #fff; }
+        .delete-btn { background: #ff4444; color: #fff; }
+        .action-btn:hover { opacity: 0.8; }
+        .hidden { display: none; }
+        .token { font-family: monospace; background: #1a1a1a; padding: 2px 4px; border-radius: 3px; color: #00ff00; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 150px; }
+        .stat-number { font-size: 2em; color: #00ff00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👥 Participant Management</h1>
+            <div class="nav-buttons">
+                <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
+                <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Participant</button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number"><%= participants.length %></div>
+                <div>Total Participants</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= participants.filter(p => p.total_points > 0).length %></div>
+                <div>Active Participants</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= Math.round(participants.reduce((sum, p) => sum + (p.total_points || 0), 0) / participants.length) || 0 %></div>
+                <div>Avg Points</div>
+            </div>
+        </div>
+
+        <!-- Create/Edit Form -->
+        <div id="participantForm" class="participant-form hidden">
+            <h3 id="formTitle">Create New Participant</h3>
+            <form id="participantFormElement">
+                <input type="hidden" id="originalToken" name="originalToken">
+                <div class="form-group">
+                    <label for="token">Participant Token</label>
+                    <input type="text" id="token" name="token" placeholder="CTF-XXXXX" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">Participant Name</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <button type="submit" class="form-btn" id="submitBtn">Create Participant</button>
+                <button type="button" class="form-btn cancel" onclick="hideForm()">Cancel</button>
+            </form>
+        </div>
+
+        <!-- Participants Table -->
+        <div class="participants-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token</th>
+                        <th>Name</th>
+                        <th>Total Points</th>
+                        <th>Challenges Solved</th>
+                        <th>Last Activity</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% participants.forEach(function(participant) { %>
+                      <tr>
+                        <td><span class="token"><%= participant.token %></span></td>
+                        <td><strong><%= participant.name %></strong></td>
+                        <td><%= participant.total_points || 0 %></td>
+                        <td><%= participant.solved_challenges || 0 %></td>
+                        <td><%= participant.last_submission ? new Date(participant.last_submission).toLocaleString() : 'Never' %></td>
+                        <td><%= new Date(participant.created_at).toLocaleDateString() %></td>
+                        <td>
+                            <button class="action-btn edit-btn" onclick="editParticipant('<%= participant.token %>', '<%= participant.name.replace(/'/g, "\\'") %>')">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteParticipant('<%= participant.token %>', '<%= participant.name.replace(/'/g, "\\'") %>')">Delete</button>
+                        </td>
+                      </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let isEditing = false;
+        const organizerToken = '<%= token %>';
+
+        function showCreateForm() {
+            document.getElementById('participantForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Create New Participant';
+            document.getElementById('submitBtn').textContent = 'Create Participant';
+            document.getElementById('participantFormElement').reset();
+            document.getElementById('originalToken').value = '';
+            document.getElementById('token').disabled = false;
+            isEditing = false;
+        }
+
+        function editParticipant(token, name) {
+            document.getElementById('participantForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Edit Participant';
+            document.getElementById('submitBtn').textContent = 'Update Participant';
+            document.getElementById('originalToken').value = token;
+            document.getElementById('token').value = token;
+            document.getElementById('name').value = name;
+            document.getElementById('token').disabled = true; // Don't allow token changes during edit
+            isEditing = true;
+        }
+
+        function hideForm() {
+            document.getElementById('participantForm').classList.add('hidden');
+            document.getElementById('participantFormElement').reset();
+            document.getElementById('token').disabled = false;
+            isEditing = false;
+        }
+
+        async function deleteParticipant(token, name) {
+            if (confirm(`Are you sure you want to delete participant "${name}" (${token})? This will also delete all their submissions.`)) {
+                try {
+                    const response = await fetch(`/api/participants/${encodeURIComponent(token)}?token=${organizerToken}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Error deleting participant: ' + error.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting participant: ' + error.message);
+                }
+            }
+        }
+
+        document.getElementById('participantFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const participantData = {
+                token: formData.get('token'),
+                name: formData.get('name')
+            };
+
+            try {
+                let response;
+                if (isEditing) {
+                    const originalToken = formData.get('originalToken');
+                    response = await fetch(`/api/participants/${encodeURIComponent(originalToken)}?token=${organizerToken}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(participantData)
+                    });
+                } else {
+                    response = await fetch(`/api/participants?token=${organizerToken}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(participantData)
+                    });
+                }
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

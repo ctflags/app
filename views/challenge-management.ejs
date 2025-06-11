@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF Challenge Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
+        .nav-btn:hover { background: #777; }
+        .nav-btn.primary { background: #00ff00; color: #000; }
+        .nav-btn.primary:hover { background: #00cc00; }
+        .challenge-form { background: #2d2d2d; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #00ff00; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .form-group textarea { height: 80px; resize: vertical; }
+        .form-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+        .form-btn:hover { background: #00cc00; }
+        .form-btn.cancel { background: #666; color: #fff; }
+        .form-btn.cancel:hover { background: #777; }
+        .challenges-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
+        .challenges-table table { width: 100%; border-collapse: collapse; }
+        .challenges-table th, .challenges-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        .challenges-table th { background: #333; color: #00ff00; }
+        .challenges-table tr:hover { background: #333; }
+        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .edit-btn { background: #ff6b35; color: #fff; }
+        .delete-btn { background: #ff4444; color: #fff; }
+        .action-btn:hover { opacity: 0.8; }
+        .hidden { display: none; }
+        .points { color: #00ff00; font-weight: bold; }
+        .flag { font-family: monospace; background: #1a1a1a; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Challenge Management</h1>
+            <div class="nav-buttons">
+                <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
+                <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Challenge</button>
+            </div>
+        </div>
+
+        <!-- Create/Edit Form -->
+        <div id="challengeForm" class="challenge-form hidden">
+            <h3 id="formTitle">Create New Challenge</h3>
+            <form id="challengeFormElement">
+                <input type="hidden" id="challengeId" name="id">
+                <div class="form-group">
+                    <label for="name">Challenge Name</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="flag">Flag</label>
+                    <input type="text" id="flag" name="flag" placeholder="CTF{example_flag}" required>
+                </div>
+                <div class="form-group">
+                    <label for="points">Points</label>
+                    <input type="number" id="points" name="points" min="1" value="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="hint">Hint (optional)</label>
+                    <textarea id="hint" name="hint" placeholder="Optional hint for participants"></textarea>
+                </div>
+                <button type="submit" class="form-btn" id="submitBtn">Create Challenge</button>
+                <button type="button" class="form-btn cancel" onclick="hideForm()">Cancel</button>
+            </form>
+        </div>
+
+        <!-- Challenges Table -->
+        <div class="challenges-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Flag</th>
+                        <th>Points</th>
+                        <th>Hint</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% challenges.forEach(function(challenge) { %>
+                      <tr>
+                        <td><%= challenge.id %></td>
+                        <td><strong><%= challenge.name %></strong></td>
+                        <td><%= challenge.description.length > 50 ? challenge.description.substring(0, 50) + '...' : challenge.description %></td>
+                        <td><span class="flag"><%= challenge.flag %></span></td>
+                        <td><span class="points"><%= challenge.points %></span></td>
+                        <td><%= (challenge.hint && challenge.hint.length > 30) ? challenge.hint.substring(0, 30) + '...' : (challenge.hint || '-') %></td>
+                        <td><%= new Date(challenge.created_at).toLocaleDateString() %></td>
+                        <td>
+                            <button class="action-btn edit-btn" onclick="editChallenge(<%= challenge.id %>, '<%= challenge.name.replace(/'/g, "\\'") %>', '<%= challenge.description.replace(/'/g, "\\'") %>', '<%= challenge.flag.replace(/'/g, "\\'") %>', <%= challenge.points %>, '<%= (challenge.hint || '').replace(/'/g, "\\'") %>')">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteChallenge(<%= challenge.id %>, '<%= challenge.name.replace(/'/g, "\\'") %>')">Delete</button>
+                        </td>
+                      </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let isEditing = false;
+        const organizerToken = '<%= token %>';
+
+        function showCreateForm() {
+            document.getElementById('challengeForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Create New Challenge';
+            document.getElementById('submitBtn').textContent = 'Create Challenge';
+            document.getElementById('challengeFormElement').reset();
+            document.getElementById('challengeId').value = '';
+            isEditing = false;
+        }
+
+        function editChallenge(id, name, description, flag, points, hint) {
+            document.getElementById('challengeForm').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Edit Challenge';
+            document.getElementById('submitBtn').textContent = 'Update Challenge';
+            document.getElementById('challengeId').value = id;
+            document.getElementById('name').value = name;
+            document.getElementById('description').value = description;
+            document.getElementById('flag').value = flag;
+            document.getElementById('points').value = points;
+            document.getElementById('hint').value = hint || '';
+            isEditing = true;
+        }
+
+        function hideForm() {
+            document.getElementById('challengeForm').classList.add('hidden');
+            document.getElementById('challengeFormElement').reset();
+            isEditing = false;
+        }
+
+        async function deleteChallenge(id, name) {
+            if (confirm(`Are you sure you want to delete "${name}"? This will also delete all related submissions.`)) {
+                try {
+                    const response = await fetch(`/api/challenges/${id}?token=${organizerToken}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        //alert('Challenge deleted successfully');
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Error deleting challenge: ' + error.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting challenge: ' + error.message);
+                }
+            }
+        }
+
+        document.getElementById('challengeFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const challengeData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                flag: formData.get('flag'),
+                points: parseInt(formData.get('points')),
+                hint: formData.get('hint') || ''
+            };
+
+            try {
+                let response;
+                if (isEditing) {
+                    const id = formData.get('id');
+                    response = await fetch(`/api/challenges/${id}?token=${organizerToken}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(challengeData)
+                    });
+                } else {
+                    response = await fetch(`/api/challenges?token=${organizerToken}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(challengeData)
+                    });
+                }
+
+                if (response.ok) {
+                    alert(isEditing ? 'Challenge updated successfully' : 'Challenge created successfully');
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + error.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

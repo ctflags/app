@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF - Invalid Token</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; margin: 0; padding: 50px; text-align: center; }
+        .error-box { background: #2d2d2d; padding: 30px; border-radius: 8px; border-left: 4px solid #ff4444; max-width: 400px; margin: 0 auto; }
+        .retry-btn { background: #00ff00; color: #000; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 10px 5px; }
+        .retry-btn:hover { background: #00cc00; }
+        .home-btn { background: #666; color: #fff; }
+        .home-btn:hover { background: #777; }
+        h1 { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="error-box">
+        <h1>❌ Invalid Token</h1>
+        <p>The participant token you entered is not valid. Please check your token and try again.</p>
+        <a href="/participant" class="retry-btn">Enter Token Again</a>
+        <a href="/" class="retry-btn home-btn">Back to Home</a>
+    </div>
+</body>
+</html>
