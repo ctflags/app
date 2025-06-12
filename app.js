@@ -7,6 +7,7 @@ const { getParticipantByToken, getParticipantsWithProgress, getParticipantProgre
 const { getAllChallenges, getChallengesWithSolutions, getChallengeById, createChallenge, updateChallenge, deleteChallenge } = require('./database/challenges');
 const { getExistingSolve, createSubmission, getAllSubmissions, getSubmissionById, updateSubmission, deleteSubmission, createSubmissionAdmin, getSubmissionStats } = require('./database/submissions');
 const { getOrganizerByToken, validateOrganizerToken } = require('./database/organizers');
+const { recordHintView, hasViewedHint, getParticipantHintViews, getChallengeHintStats, getAllHintViews } = require('./database/hint_views');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -194,6 +195,40 @@ app.post('/api/submit', async (req, res) => {
     });
   } catch (error) {
     console.error('Flag submission error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// API endpoint for recording hint views
+app.post('/api/hint-viewed', async (req, res) => {
+  const { token, challengeId } = req.body;
+
+  if (!token || !challengeId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Verify participant exists
+    const participant = await getParticipantByToken(token);
+    if (!participant) {
+      return res.status(400).json({ error: 'Invalid participant token' });
+    }
+
+    // Verify challenge exists
+    const challenge = await getChallengeById(challengeId);
+    if (!challenge) {
+      return res.status(400).json({ error: 'Invalid challenge' });
+    }
+
+    // Record hint view (will not duplicate due to unique constraint)
+    const result = await recordHintView(token, challengeId);
+    
+    res.json({ 
+      success: true, 
+      message: result ? 'Hint view recorded' : 'Hint view already recorded'
+    });
+  } catch (error) {
+    console.error('Hint view recording error:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });

@@ -27,17 +27,19 @@ async function getParticipantsWithProgress() {
   return result.rows;
 }
 
-// Get participant progress matrix
+// Get participant progress matrix with hint data
 async function getParticipantProgress() {
   const pool = getDatabase();
   const result = await pool.query(`
     SELECT 
       p.token,
       c.id as challenge_id,
-      MAX(CASE WHEN s.is_correct = true THEN 1 ELSE 0 END) as solved
+      MAX(CASE WHEN s.is_correct = true THEN 1 ELSE 0 END) as solved,
+      MAX(CASE WHEN h.id IS NOT NULL THEN 1 ELSE 0 END) as hint_viewed
     FROM participants p
     CROSS JOIN challenges c
     LEFT JOIN submissions s ON p.token = s.participant_token AND c.id = s.challenge_id
+    LEFT JOIN hint_views h ON p.token = h.participant_token AND c.id = h.challenge_id
     GROUP BY p.token, c.id
   `);
   
@@ -45,7 +47,10 @@ async function getParticipantProgress() {
   const progressMatrix = {};
   result.rows.forEach(p => {
     if (!progressMatrix[p.token]) progressMatrix[p.token] = {};
-    progressMatrix[p.token][p.challenge_id] = p.solved === 1;
+    progressMatrix[p.token][p.challenge_id] = {
+      solved: p.solved === 1,
+      hint_viewed: p.hint_viewed === 1
+    };
   });
   
   return progressMatrix;

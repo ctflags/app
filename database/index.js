@@ -79,11 +79,24 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Hint views table
+    CREATE TABLE IF NOT EXISTS hint_views (
+      id SERIAL PRIMARY KEY,
+      participant_token VARCHAR(255),
+      challenge_id INTEGER,
+      viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (participant_token) REFERENCES participants (token),
+      FOREIGN KEY (challenge_id) REFERENCES challenges (id),
+      UNIQUE(participant_token, challenge_id)
+    );
+
     -- Create indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_submissions_participant ON submissions(participant_token);
     CREATE INDEX IF NOT EXISTS idx_submissions_challenge ON submissions(challenge_id);
     CREATE INDEX IF NOT EXISTS idx_submissions_correct ON submissions(is_correct);
     CREATE INDEX IF NOT EXISTS idx_challenges_flag ON challenges(flag);
+    CREATE INDEX IF NOT EXISTS idx_hint_views_participant ON hint_views(participant_token);
+    CREATE INDEX IF NOT EXISTS idx_hint_views_challenge ON hint_views(challenge_id);
   `;
 
   const statements = schema.split(';').filter(stmt => stmt.trim());

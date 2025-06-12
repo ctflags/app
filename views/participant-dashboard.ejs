@@ -71,8 +71,8 @@
                   <span class="solved-badge">SOLVED</span>
                 <% } %>
               </h3>
-              <% if (challenge.hint && challenge.hint.trim()) { %>
-                <a href="#" class="hint-link" onclick="showHint('<%= challenge.name.replace(/'/g, "\\'") %>', '<%= challenge.hint.replace(/'/g, "\\'").replace(/\n/g, "\\n") %>'); return false;">💡 Hint</a>
+              <% if (challenge.hint && challenge.hint.trim() && !challenge.solved) { %>
+                <a href="#" class="hint-link" onclick="showHint(<%= challenge.id %>, '<%= challenge.name.replace(/'/g, "\\'") %>', '<%= challenge.hint.replace(/'/g, "\\'").replace(/\n/g, "\\n") %>'); return false;">💡 Hint</a>
               <% } %>
             </div>
             <p><%= challenge.description %></p>
@@ -151,7 +151,23 @@
             window.location.href = '/participant';
         }
 
-        function showHint(challengeName, hint) {
+        async function showHint(challengeId, challengeName, hint) {
+            // Record hint view
+            try {
+                await fetch('/api/hint-viewed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: '<%= token %>',
+                        challengeId: challengeId
+                    })
+                });
+            } catch (error) {
+                console.error('Error recording hint view:', error);
+                // Continue showing hint even if recording fails
+            }
+            
+            // Show hint popup
             document.getElementById('hintTitle').textContent = `💡 ${challengeName} - Hint`;
             document.getElementById('hintBody').innerHTML = hint.replace(/\n/g, '<br>');
             document.getElementById('hintPopup').style.display = 'flex';
