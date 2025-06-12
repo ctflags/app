@@ -15,10 +15,11 @@ async function getChallengesWithSolutions(participantToken) {
            CASE WHEN s.is_correct = 1 THEN true ELSE false END as solved
     FROM challenges c
     LEFT JOIN (
-      SELECT challenge_id, MAX(CASE WHEN is_correct = true THEN 1 ELSE 0 END) as is_correct
-      FROM submissions 
-      WHERE participant_token = $1 
-      GROUP BY challenge_id
+      SELECT s.challenge_id, MAX(CASE WHEN s.is_correct = true THEN 1 ELSE 0 END) as is_correct
+      FROM submissions s
+      JOIN participants p ON s.participant_id = p.id
+      WHERE p.token = $1 
+      GROUP BY s.challenge_id
     ) s ON c.id = s.challenge_id
     ORDER BY c.id
   `, [participantToken]);
@@ -56,8 +57,9 @@ async function updateChallenge(id, name, description, flag, points, hint = '') {
 async function deleteChallenge(id) {
   const pool = getDatabase();
   
-  // First delete related submissions
+  // First delete related submissions and hint views
   await pool.query('DELETE FROM submissions WHERE challenge_id = $1', [id]);
+  await pool.query('DELETE FROM hint_views WHERE challenge_id = $1', [id]);
   
   // Then delete the challenge
   const result = await pool.query('DELETE FROM challenges WHERE id = $1', [id]);

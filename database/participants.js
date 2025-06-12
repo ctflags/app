@@ -12,6 +12,7 @@ async function getParticipantsWithProgress() {
   const pool = getDatabase();
   const result = await pool.query(`
     SELECT 
+      p.id,
       p.token,
       p.name,
       p.created_at,
@@ -19,9 +20,9 @@ async function getParticipantsWithProgress() {
       SUM(CASE WHEN s.is_correct = true THEN c.points ELSE 0 END) as total_points,
       MAX(s.submitted_at) as last_submission
     FROM participants p
-    LEFT JOIN submissions s ON p.token = s.participant_token
+    LEFT JOIN submissions s ON p.id = s.participant_id
     LEFT JOIN challenges c ON s.challenge_id = c.id
-    GROUP BY p.token, p.name, p.created_at
+    GROUP BY p.id, p.token, p.name, p.created_at
     ORDER BY total_points DESC, last_submission ASC
   `);
   return result.rows;
@@ -38,8 +39,8 @@ async function getParticipantProgress() {
       MAX(CASE WHEN h.id IS NOT NULL THEN 1 ELSE 0 END) as hint_viewed
     FROM participants p
     CROSS JOIN challenges c
-    LEFT JOIN submissions s ON p.token = s.participant_token AND c.id = s.challenge_id
-    LEFT JOIN hint_views h ON p.token = h.participant_token AND c.id = h.challenge_id
+    LEFT JOIN submissions s ON p.id = s.participant_id AND c.id = s.challenge_id
+    LEFT JOIN hint_views h ON p.id = h.participant_id AND c.id = h.challenge_id
     GROUP BY p.token, c.id
   `);
   
@@ -84,8 +85,16 @@ async function updateParticipant(token, name) {
 async function deleteParticipant(token) {
   const pool = getDatabase();
   
-  // First delete related submissions
-  await pool.query('DELETE FROM submissions WHERE participant_token = $1', [token]);
+  // Get participant ID first
+  const participant = await pool.query('SELECT id FROM participants WHERE token = $1', [token]);
+  if (participant.rows.length === 0) {
+    return { token, changes: 0 };
+  }
+  const participantId = participant.rows[0].id;
+  
+  // First delete related submissions and hint views
+  await pool.query('DELETE FROM submissions WHERE participant_id = $1', [participantId]);
+  await pool.query('DELETE FROM hint_views WHERE participant_id = $1', [participantId]);
   
   // Then delete the participant
   const result = await pool.query('DELETE FROM participants WHERE token = $1', [token]);

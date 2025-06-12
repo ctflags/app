@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CTF Hint View Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .nav-buttons { margin-bottom: 20px; }
+        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
+        .nav-btn:hover { background: #777; }
+        .nav-btn.primary { background: #ff8c00; color: #000; }
+        .nav-btn.primary:hover { background: #e67e00; }
+        .stats { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
+        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 140px; margin: 5px; }
+        .stat-number { font-size: 1.8em; color: #ff8c00; font-weight: bold; }
+        .analytics { background: #2d2d2d; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .chart-container { margin: 20px 0; }
+        .bar-chart { display: flex; align-items: end; height: 220px; margin: 20px 0; margin-bottom: 180px; }
+        .bar { background: #ff8c00; margin: 4px; min-width: 50px; display: flex; flex-direction: column; justify-content: end; position: relative; }
+        .bar-label { 
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 13px; 
+            white-space: nowrap; 
+            position: absolute;
+            bottom: -170px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #e0e0e0;
+            max-height: 160px;
+            overflow: visible;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .bar-value { color: #000; font-size: 12px; font-weight: bold; text-align: center; padding: 4px; min-height: 18px; }
+        .filters { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .filter-group { display: inline-block; margin-right: 15px; }
+        .filter-group label { color: #ff8c00; margin-right: 5px; }
+        .filter-group select, .filter-group input { padding: 5px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
+        .hint-views-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
+        .hint-views-table table { width: 100%; border-collapse: collapse; }
+        .hint-views-table th, .hint-views-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        .hint-views-table th { background: #333; color: #ff8c00; }
+        .hint-views-table tr:hover { background: #333; }
+        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .delete-btn { background: #ff4444; color: #fff; }
+        .action-btn:hover { opacity: 0.8; }
+        .participant-name { color: #00ff00; }
+        .challenge-name { color: #ff8c00; }
+        .solved-status { font-size: 12px; }
+        .solved { color: #00ff00; }
+        .unsolved { color: #ff4444; }
+        .relative-time { color: #888; font-style: italic; }
+        .bulk-actions { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .bulk-btn { background: #ff4444; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        .bulk-btn:hover { background: #cc3333; }
+        .checkbox { margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💡 Hint View Management</h1>
+            <div class="nav-buttons">
+                <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
+                <button onclick="exportData()" class="nav-btn primary">📊 Export Data</button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.total_hint_views %></div>
+                <div>Total Hint Views</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.unique_participants %></div>
+                <div>Participants Used Hints</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= stats.challenges_with_hints %></div>
+                <div>Challenges with Hint Views</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= Math.round(stats.avg_hints_per_participant * 100) / 100 %></div>
+                <div>Avg Hints per Participant</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number"><%= Math.round(stats.solve_rate_after_hint * 100) %>%</div>
+                <div>Solve Rate After Hint</div>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="analytics">
+            <h3>📈 Hint Usage Analytics</h3>
+            
+            <div class="chart-container">
+                <h4>Hint Views per Challenge</h4>
+                <div class="bar-chart">
+                    <% challengeStats.forEach(function(stat) { 
+                        const maxHints = Math.max(...challengeStats.map(s => s.hint_count));
+                        const height = maxHints > 0 ? (stat.hint_count / maxHints * 180) : 0;
+                    %>
+                        <div class="bar" style="height: <%= height %>px;">
+                            <div class="bar-value"><%= stat.hint_count %></div>
+                            <div class="bar-label"><%= stat.challenge_name %></div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; margin-top: 20px;">
+                <div style="flex: 1;">
+                    <h4>Top Challenges Needing Hints</h4>
+                    <% challengeStats.slice(0, 5).forEach(function(stat, index) { %>
+                        <div style="margin: 8px 0; color: #ff8c00;">
+                            <%= index + 1 %>. <%= stat.challenge_name %> - <%= stat.hint_count %> views
+                            (<%= Math.round(stat.solve_rate_after_hint * 100) %>% solve rate)
+                        </div>
+                    <% }); %>
+                </div>
+                <div style="flex: 1;">
+                    <h4>Most Active Hint Users</h4>
+                    <% participantStats.slice(0, 5).forEach(function(stat, index) { %>
+                        <div style="margin: 8px 0; color: #00ff00;">
+                            <%= index + 1 %>. <%= stat.participant_name %> - <%= stat.hint_count %> views
+                            (<%= stat.solve_count %>/<%= stat.hint_count %> solved)
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>Filter by Participant:</label>
+                <select id="participantFilter" onchange="filterTable()">
+                    <option value="">All Participants</option>
+                    <% [...new Set(hintViews.map(h => h.participant_token))].forEach(function(token) { 
+                        const hintView = hintViews.find(h => h.participant_token === token);
+                    %>
+                        <option value="<%= token %>"><%= hintView.participant_name %> (<%= token %>)</option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Filter by Challenge:</label>
+                <select id="challengeFilter" onchange="filterTable()">
+                    <option value="">All Challenges</option>
+                    <% [...new Set(hintViews.map(h => h.challenge_id))].forEach(function(challengeId) { 
+                        const hintView = hintViews.find(h => h.challenge_id === challengeId);
+                    %>
+                        <option value="<%= challengeId %>"><%= hintView.challenge_name %></option>
+                    <% }); %>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Filter by Status:</label>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="">All</option>
+                    <option value="solved">Solved After Hint</option>
+                    <option value="unsolved">Viewed Hint, Not Solved</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button onclick="clearFilters()" class="nav-btn" style="margin-top: 20px;">🔄 Clear Filters</button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="checkbox">
+            <label for="selectAll">Select All</label>
+            <button onclick="bulkDelete()" class="bulk-btn">🗑️ Delete Selected</button>
+            <span id="selectedCount" style="margin-left: 20px; color: #888;">0 selected</span>
+        </div>
+
+        <!-- Hint Views Table -->
+        <div class="hint-views-table">
+            <table id="hintViewsTable">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>ID</th>
+                        <th>Participant</th>
+                        <th>Challenge</th>
+                        <th>Hint Content</th>
+                        <th>Viewed At</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% hintViews.forEach(function(hintView) { %>
+                      <tr data-participant="<%= hintView.participant_token %>" 
+                          data-challenge="<%= hintView.challenge_id %>" 
+                          data-status="<%= hintView.solved_after_hint ? 'solved' : 'unsolved' %>">
+                        <td>
+                            <input type="checkbox" class="row-checkbox" value="<%= hintView.id %>" onchange="updateSelectedCount()">
+                        </td>
+                        <td><%= hintView.id %></td>
+                        <td class="participant-name">
+                            <%= hintView.participant_name %><br>
+                            <small>(<%= hintView.participant_token %>)</small>
+                        </td>
+                        <td class="challenge-name"><%= hintView.challenge_name %></td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                            <%= hintView.hint_content ? hintView.hint_content.substring(0, 50) + (hintView.hint_content.length > 50 ? '...' : '') : 'No hint' %>
+                        </td>
+                        <td>
+                            <%= new Date(hintView.viewed_at).toLocaleString() %><br>
+                            <span class="relative-time" data-timestamp="<%= hintView.viewed_at %>"></span>
+                        </td>
+                        <td>
+                            <div class="solved-status <%= hintView.solved_after_hint ? 'solved' : 'unsolved' %>">
+                                <%= hintView.solved_after_hint ? '✓ Solved' : '✗ Not Solved' %>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="action-btn delete-btn" onclick="deleteHintView(<%= hintView.id %>, '<%= hintView.participant_name.replace(/'/g, "\\'") %>', '<%= hintView.challenge_name.replace(/'/g, "\\'") %>')">Delete</button>
+                        </td>
+                      </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const organizerToken = '<%= token %>';
+
+        function getRelativeTime(timestamp) {
+            const now = new Date();
+            const past = new Date(timestamp + 'Z');
+            const diffInSeconds = Math.floor((now - past) / 1000);
+            
+            if (diffInSeconds < 60) {
+                return diffInSeconds + ' secs ago';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return minutes + ' mins ago';
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return hours + ' hrs ago';
+            } else {
+                const days = Math.floor(diffInSeconds / 86400);
+                return days + ' days ago';
+            }
+        }
+        
+        function updateRelativeTimes() {
+            document.querySelectorAll('.relative-time').forEach(function(element) {
+                const timestamp = element.getAttribute('data-timestamp');
+                element.textContent = getRelativeTime(timestamp);
+            });
+        }
+
+        function filterTable() {
+            const participantFilter = document.getElementById('participantFilter').value;
+            const challengeFilter = document.getElementById('challengeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const rows = document.querySelectorAll('#hintViewsTable tbody tr');
+
+            rows.forEach(row => {
+                const participant = row.dataset.participant;
+                const challenge = row.dataset.challenge;
+                const status = row.dataset.status;
+
+                const showParticipant = !participantFilter || participant === participantFilter;
+                const showChallenge = !challengeFilter || challenge === challengeFilter;
+                const showStatus = !statusFilter || status === statusFilter;
+
+                if (showParticipant && showChallenge && showStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            updateSelectedCount();
+        }
+
+        function clearFilters() {
+            document.getElementById('participantFilter').value = '';
+            document.getElementById('challengeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filterTable();
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            const visibleRows = Array.from(document.querySelectorAll('#hintViewsTable tbody tr')).filter(row => row.style.display !== 'none');
+            
+            visibleRows.forEach(row => {
+                const checkbox = row.querySelector('.row-checkbox');
+                checkbox.checked = selectAll;
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+            document.getElementById('selectedCount').textContent = visibleCheckboxes.length + ' selected';
+        }
+
+        async function deleteHintView(id, participantName, challengeName) {
+            if (confirm(`Are you sure you want to delete the hint view from "${participantName}" for "${challengeName}"?`)) {
+                try {
+                    const response = await fetch(`/api/hint-views/${id}?token=${organizerToken}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Error deleting hint view: ' + error.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting hint view: ' + error.message);
+                }
+            }
+        }
+
+        async function bulkDelete() {
+            const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
+                .filter(cb => cb.closest('tr').style.display !== 'none')
+                .map(cb => cb.value);
+            
+            if (selected.length === 0) {
+                alert('Please select hint views to delete.');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete ${selected.length} selected hint views? This action cannot be undone.`)) {
+                try {
+                    const response = await fetch(`/api/hint-views/bulk-delete?token=${organizerToken}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: selected })
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        const error = await response.json();
+                        alert('Error deleting hint views: ' + error.message);
+                    }
+                } catch (error) {
+                    alert('Error deleting hint views: ' + error.message);
+                }
+            }
+        }
+
+        function exportData() {
+            const filters = {
+                participant: document.getElementById('participantFilter').value,
+                challenge: document.getElementById('challengeFilter').value,
+                status: document.getElementById('statusFilter').value
+            };
+            
+            const params = new URLSearchParams(filters);
+            params.append('token', organizerToken);
+            window.open(`/api/hint-views/export?${params.toString()}`, '_blank');
+        }
+
+        // Update times on page load and every 30 seconds
+        updateRelativeTimes();
+        setInterval(updateRelativeTimes, 30000);
+    </script>
+</body>
+</html>

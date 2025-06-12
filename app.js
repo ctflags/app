@@ -7,7 +7,7 @@ const { getParticipantByToken, getParticipantsWithProgress, getParticipantProgre
 const { getAllChallenges, getChallengesWithSolutions, getChallengeById, createChallenge, updateChallenge, deleteChallenge } = require('./database/challenges');
 const { getExistingSolve, createSubmission, getAllSubmissions, getSubmissionById, updateSubmission, deleteSubmission, createSubmissionAdmin, getSubmissionStats } = require('./database/submissions');
 const { getOrganizerByToken, validateOrganizerToken } = require('./database/organizers');
-const { recordHintView, hasViewedHint, getParticipantHintViews, getChallengeHintStats, getAllHintViews } = require('./database/hint_views');
+const { recordHintView, hasViewedHint, getParticipantHintViews, getChallengeHintStats, getAllHintViews, getHintViewStats, getChallengeHintAnalytics, getParticipantHintAnalytics, getDetailedHintViews, deleteHintView, bulkDeleteHintViews } = require('./database/hint_views');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -150,6 +150,27 @@ app.get('/organizer/submissions', requireOrganizerAuth, async (req, res) => {
       token: req.organizer.token
     });
   } catch (error) {
+    res.status(500).send('Database error');
+  }
+});
+
+// Hint view management page (protected)
+app.get('/organizer/hints', requireOrganizerAuth, async (req, res) => {
+  try {
+    const stats = await getHintViewStats();
+    const challengeStats = await getChallengeHintAnalytics();
+    const participantStats = await getParticipantHintAnalytics();
+    const hintViews = await getDetailedHintViews();
+    
+    res.render('hint-management', {
+      stats: stats,
+      challengeStats: challengeStats,
+      participantStats: participantStats,
+      hintViews: hintViews,
+      token: req.organizer.token
+    });
+  } catch (error) {
+    console.error('Hint management error:', error);
     res.status(500).send('Database error');
   }
 });
@@ -429,6 +450,79 @@ app.delete('/api/submissions/:id', requireOrganizerAuth, async (req, res) => {
     res.json({ success: true, message: 'Submission deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+// API endpoints for hint view management
+
+// Bulk delete hint views (must come before the :id route)
+app.delete('/api/hint-views/bulk-delete', requireOrganizerAuth, async (req, res) => {
+  const { ids } = req.body;
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Invalid hint view IDs provided' });
+  }
+
+  try {
+    const result = await bulkDeleteHintViews(ids);
+    res.json({ 
+      success: true, 
+      message: `${result.deletedCount} hint views deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+// Delete hint view
+app.delete('/api/hint-views/:id', requireOrganizerAuth, async (req, res) => {
+  const hintViewId = req.params.id;
+
+  try {
+    const result = await deleteHintView(hintViewId);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Hint view not found' });
+    }
+    res.json({ success: true, message: 'Hint view deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+// Export hint view data
+app.get('/api/hint-views/export', requireOrganizerAuth, async (req, res) => {
+  try {
+    const hintViews = await getDetailedHintViews();
+    
+    // Apply filters if provided
+    let filteredData = hintViews;
+    const { participant, challenge, status } = req.query;
+    
+    if (participant) {
+      filteredData = filteredData.filter(h => h.participant_token === participant);
+    }
+    if (challenge) {
+      filteredData = filteredData.filter(h => h.challenge_id == challenge);
+    }
+    if (status) {
+      const isSolved = status === 'solved';
+      filteredData = filteredData.filter(h => h.solved_after_hint === isSolved);
+    }
+
+    // Convert to CSV
+    const csvHeader = 'ID,Participant Token,Participant Name,Challenge ID,Challenge Name,Viewed At,Solved After Hint,Hint Content\n';
+    const csvRows = filteredData.map(h => 
+      `${h.id},"${h.participant_token}","${h.participant_name}",${h.challenge_id},"${h.challenge_name}","${h.viewed_at}",${h.solved_after_hint},"${(h.hint_content || '').replace(/"/g, '""')}"`
+    ).join('\n');
+    
+    const csvContent = csvHeader + csvRows;
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="hint-views-export.csv"');
+    res.send(csvContent);
+  } catch (error) {
+    res.status(500).json({ error: 'Export failed', message: error.message });
   }
 });
 

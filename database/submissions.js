@@ -3,19 +3,28 @@ const { getDatabase } = require('./index');
 // Check if participant already solved a challenge
 async function getExistingSolve(participantToken, challengeId) {
   const pool = getDatabase();
-  const result = await pool.query(
-    'SELECT * FROM submissions WHERE participant_token = $1 AND challenge_id = $2 AND is_correct = true',
-    [participantToken, challengeId]
-  );
+  const result = await pool.query(`
+    SELECT s.* FROM submissions s
+    JOIN participants p ON s.participant_id = p.id
+    WHERE p.token = $1 AND s.challenge_id = $2 AND s.is_correct = true
+  `, [participantToken, challengeId]);
   return result.rows[0] || null;
 }
 
 // Create a new submission
 async function createSubmission(participantToken, challengeId, submittedFlag, isCorrect) {
   const pool = getDatabase();
+  
+  // Get participant ID from token
+  const participant = await pool.query('SELECT id FROM participants WHERE token = $1', [participantToken]);
+  if (participant.rows.length === 0) {
+    throw new Error('Participant not found');
+  }
+  const participantId = participant.rows[0].id;
+  
   const result = await pool.query(
-    'INSERT INTO submissions (participant_token, challenge_id, submitted_flag, is_correct) VALUES ($1, $2, $3, $4) RETURNING id',
-    [participantToken, challengeId, submittedFlag, isCorrect]
+    'INSERT INTO submissions (participant_id, challenge_id, submitted_flag, is_correct) VALUES ($1, $2, $3, $4) RETURNING id',
+    [participantId, challengeId, submittedFlag, isCorrect]
   );
   return { id: result.rows[0].id };
 }
@@ -26,7 +35,7 @@ async function getAllSubmissions() {
   const result = await pool.query(`
     SELECT 
       s.id,
-      s.participant_token,
+      p.token as participant_token,
       s.challenge_id,
       s.submitted_flag,
       s.is_correct,
@@ -36,7 +45,7 @@ async function getAllSubmissions() {
       c.flag as correct_flag,
       c.points
     FROM submissions s
-    JOIN participants p ON s.participant_token = p.token
+    JOIN participants p ON s.participant_id = p.id
     JOIN challenges c ON s.challenge_id = c.id
     ORDER BY s.submitted_at DESC
   `);
@@ -49,12 +58,13 @@ async function getSubmissionById(id) {
   const result = await pool.query(`
     SELECT 
       s.*,
+      p.token as participant_token,
       p.name as participant_name,
       c.name as challenge_name,
       c.flag as correct_flag,
       c.points
     FROM submissions s
-    JOIN participants p ON s.participant_token = p.token
+    JOIN participants p ON s.participant_id = p.id
     JOIN challenges c ON s.challenge_id = c.id
     WHERE s.id = $1
   `, [id]);
@@ -81,9 +91,17 @@ async function deleteSubmission(id) {
 // Create submission with all details (for admin creation)
 async function createSubmissionAdmin(participantToken, challengeId, submittedFlag, isCorrect) {
   const pool = getDatabase();
+  
+  // Get participant ID from token
+  const participant = await pool.query('SELECT id FROM participants WHERE token = $1', [participantToken]);
+  if (participant.rows.length === 0) {
+    throw new Error('Participant not found');
+  }
+  const participantId = participant.rows[0].id;
+  
   const result = await pool.query(
-    'INSERT INTO submissions (participant_token, challenge_id, submitted_flag, is_correct) VALUES ($1, $2, $3, $4) RETURNING id',
-    [participantToken, challengeId, submittedFlag, isCorrect]
+    'INSERT INTO submissions (participant_id, challenge_id, submitted_flag, is_correct) VALUES ($1, $2, $3, $4) RETURNING id',
+    [participantId, challengeId, submittedFlag, isCorrect]
   );
   return { 
     id: result.rows[0].id, 
@@ -102,7 +120,7 @@ async function getSubmissionStats() {
       COUNT(*) as total_submissions,
       COUNT(CASE WHEN is_correct = true THEN 1 END) as correct_submissions,
       COUNT(CASE WHEN is_correct = false THEN 1 END) as incorrect_submissions,
-      COUNT(DISTINCT participant_token) as participants_with_submissions,
+      COUNT(DISTINCT participant_id) as participants_with_submissions,
       COUNT(DISTINCT challenge_id) as challenges_with_submissions
     FROM submissions
   `);
