@@ -1,0 +1,147 @@
+/* Base Styles */
+body { 
+    font-family: Arial, sans-serif; 
+    margin: 20px; 
+    background: #1a1a1a; 
+    color: #fff; 
+}
+
+.container { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+}
+
+.header { 
+    text-align: center; 
+    margin-bottom: 30px; 
+}
+
+.hidden { 
+    display: none; 
+}
+
+/* Navigation Buttons */
+.nav-buttons { 
+    margin-bottom: 20px; 
+}
+
+.nav-btn { 
+    background: #666; 
+    color: #fff; 
+    padding: 10px 20px; 
+    text-decoration: none; 
+    border-radius: 4px; 
+    margin-right: 10px; 
+    display: inline-block; 
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.nav-btn:hover { 
+    background: #777; 
+}
+
+.nav-btn.primary { 
+    background: #00ff00; 
+    color: #000; 
+}
+
+.nav-btn.primary:hover { 
+    background: #00cc00; 
+}
+
+.nav-btn.danger { 
+    background: #ff4444; 
+    color: #fff; 
+}
+
+.nav-btn.danger:hover { 
+    background: #cc3333; 
+}
+
+/* Statistics */
+.stats { 
+    display: flex; 
+    justify-content: space-around; 
+    margin: 20px 0; 
+}
+
+.stat-box { 
+    background: #2d2d2d; 
+    padding: 20px; 
+    border-radius: 8px; 
+    text-align: center; 
+    min-width: 120px; 
+}
+
+.stat-number { 
+    font-size: 1.5em; 
+    color: #00ff00; 
+    font-weight: bold; 
+}
+
+/* Action Buttons */
+.action-btn { 
+    padding: 5px 10px; 
+    margin: 2px; 
+    border: none; 
+    border-radius: 3px; 
+    cursor: pointer; 
+    font-size: 12px; 
+}
+
+.edit-btn { 
+    background: #ff6b35; 
+    color: #fff; 
+}
+
+.delete-btn { 
+    background: #ff4444; 
+    color: #fff; 
+}
+
+.action-btn:hover { 
+    opacity: 0.8; 
+}
+
+/* Status Colors */
+.correct, .solved { 
+    color: #00ff00; 
+    font-weight: bold; 
+}
+
+.incorrect, .unsolved { 
+    color: #ff4444; 
+    font-weight: bold; 
+}
+
+.solved-with-hint { 
+    color: #ff8c00; 
+    font-weight: bold; 
+}
+
+.attempted-with-hint { 
+    color: #ff8c00; 
+}
+
+/* Utility Classes */
+.token, .flag { 
+    font-family: monospace; 
+    background: #1a1a1a; 
+    padding: 2px 4px; 
+    border-radius: 3px; 
+}
+
+.points { 
+    color: #00ff00; 
+    font-weight: bold; 
+}
+
+.participant-name { 
+    color: #ff6b35; 
+}
+
+.challenge-name { 
+    color: #00ff00; 
+}

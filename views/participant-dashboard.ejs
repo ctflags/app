@@ -22,6 +22,8 @@
         .challenge.solved .challenge-title { color: #ff6b35; }
         .hint-link { color: #888; text-decoration: none; font-size: 12px; padding: 4px 8px; border: 1px solid #555; border-radius: 3px; background: #333; transition: all 0.2s; }
         .hint-link:hover { color: #00ff00; border-color: #00ff00; background: #444; }
+        .hint-link.viewed { color: #ff8c00; border-color: #ff8c00; background: #2a1a0a; }
+        .hint-link.viewed:hover { color: #ffaa33; border-color: #ffaa33; background: #3a2a1a; }
         
         /* Popup styles */
         .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: none; align-items: center; justify-content: center; }
@@ -71,7 +73,7 @@
                 <% } %>
               </h3>
               <% if (challenge.hint && challenge.hint.trim() && !challenge.solved) { %>
-                <a href="#" class="hint-link" onclick="showHint(<%= challenge.id %>, '<%= challenge.name.replace(/'/g, "\\'") %>', '<%= challenge.hint.replace(/'/g, "\\'").replace(/\n/g, "\\n") %>'); return false;">💡 Hint</a>
+                <a href="#" class="hint-link <%= challenge.hint_viewed ? 'viewed' : '' %>" onclick="showHint(<%= challenge.id %>, '<%= challenge.name.replace(/'/g, "\\'") %>', '<%= challenge.hint.replace(/'/g, "\\'").replace(/\n/g, "\\n") %>'); return false;">💡 Hint <%= challenge.hint_viewed ? '(viewed)' : '' %></a>
               <% } %>
             </div>
             <p><%= challenge.description %></p>
@@ -161,6 +163,10 @@
                         challengeId: challengeId
                     })
                 });
+                
+                // Update the hint link UI immediately to show it as viewed
+                updateHintLinkAsViewed(challengeId);
+                
             } catch (error) {
                 console.error('Error recording hint view:', error);
                 // Continue showing hint even if recording fails
@@ -170,6 +176,24 @@
             document.getElementById('hintTitle').textContent = `💡 ${challengeName} - Hint`;
             document.getElementById('hintBody').innerHTML = hint.replace(/\n/g, '<br>');
             document.getElementById('hintPopup').style.display = 'flex';
+        }
+
+        function updateHintLinkAsViewed(challengeId) {
+            // Find the hint link for this challenge and mark it as viewed
+            const hintLinks = document.querySelectorAll('.hint-link');
+            hintLinks.forEach(link => {
+                // Check if this link is for the current challenge by examining the onclick attribute
+                const onclickAttr = link.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(`showHint(${challengeId},`)) {
+                    // Add the viewed class
+                    link.classList.add('viewed');
+                    
+                    // Update the text to include "(viewed)" if it doesn't already
+                    if (!link.textContent.includes('(viewed)')) {
+                        link.textContent = link.textContent + ' (viewed)';
+                    }
+                }
+            });
         }
 
         function hideHint() {

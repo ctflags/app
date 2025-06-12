@@ -1,0 +1,86 @@
+/* Form Styles */
+.form-container { 
+    background: #2d2d2d; 
+    padding: 20px; 
+    border-radius: 8px; 
+    margin-bottom: 30px; 
+}
+
+.form-group { 
+    margin-bottom: 15px; 
+}
+
+.form-group label { 
+    display: block; 
+    margin-bottom: 5px; 
+    color: #00ff00; 
+    font-weight: bold; 
+}
+
+.form-group input, 
+.form-group textarea, 
+.form-group select { 
+    width: 100%; 
+    padding: 10px; 
+    background: #333; 
+    border: 1px solid #555; 
+    color: #fff; 
+    border-radius: 4px; 
+    box-sizing: border-box;
+}
+
+.form-group textarea { 
+    height: 80px; 
+    resize: vertical; 
+}
+
+.form-btn { 
+    background: #00ff00; 
+    color: #000; 
+    padding: 10px 20px; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    margin-right: 10px; 
+}
+
+.form-btn:hover { 
+    background: #00cc00; 
+}
+
+.form-btn.cancel { 
+    background: #666; 
+    color: #fff; 
+}
+
+.form-btn.cancel:hover { 
+    background: #777; 
+}
+
+/* Filters */
+.filters { 
+    background: #2d2d2d; 
+    padding: 15px; 
+    border-radius: 8px; 
+    margin-bottom: 20px; 
+}
+
+.filter-group { 
+    display: inline-block; 
+    margin-right: 15px; 
+}
+
+.filter-group label { 
+    color: #00ff00; 
+    margin-right: 5px; 
+}
+
+.filter-group select { 
+    padding: 5px; 
+    background: #333; 
+    border: 1px solid #555; 
+    color: #fff; 
+    border-radius: 4px; 
+    width: auto;
+}

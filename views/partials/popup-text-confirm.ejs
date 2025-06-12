@@ -1,0 +1,14 @@
+<!-- Text Confirmation Popup for Dangerous Operations -->
+<div id="deleteAllPopup" class="popup-overlay">
+    <div class="popup-box">
+        <div class="popup-title">⚠️ WARNING: Dangerous Operation</div>
+        <div class="popup-message">
+            <!-- Message will be set dynamically -->
+        </div>
+        <input type="text" id="deleteConfirmInput" class="popup-input" placeholder="Type confirmation text here...">
+        <div class="popup-buttons">
+            <button class="popup-btn confirm" onclick="window.popupManager.executeTextConfirmation()">🗑️ CONFIRM</button>
+            <button class="popup-btn cancel" onclick="window.popupManager.hideTextConfirmation()">Cancel</button>
+        </div>
+    </div>
+</div>

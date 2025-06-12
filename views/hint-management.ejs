@@ -1,20 +1,12 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>CTF Hint View Management</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
-        .container { max-width: 1400px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .nav-buttons { margin-bottom: 20px; }
-        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
-        .nav-btn:hover { background: #777; }
-        .nav-btn.primary { background: #ff8c00; color: #000; }
-        .nav-btn.primary:hover { background: #e67e00; }
-        .stats { display: flex; justify-content: space-around; margin: 20px 0; flex-wrap: wrap; }
-        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 140px; margin: 5px; }
-        .stat-number { font-size: 1.8em; color: #ff8c00; font-weight: bold; }
+<%- include('partials/admin-head', { 
+    title: 'CTF Hint View Management',
+    additionalCSS: `
+        .container { max-width: 1400px; }
+        .stats { flex-wrap: wrap; }
+        .stat-box { min-width: 140px; margin: 5px; }
+        .stat-number { font-size: 1.8em; color: #ff8c00; }
         .analytics { background: #2d2d2d; padding: 20px; border-radius: 8px; margin: 20px 0; }
         .chart-container { margin: 20px 0; }
         .bar-chart { display: flex; align-items: end; height: 220px; margin: 20px 0; margin-bottom: 180px; }
@@ -35,44 +27,19 @@
             line-height: 1.2;
         }
         .bar-value { color: #000; font-size: 12px; font-weight: bold; text-align: center; padding: 4px; min-height: 18px; }
-        .filters { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .filter-group { display: inline-block; margin-right: 15px; }
-        .filter-group label { color: #ff8c00; margin-right: 5px; }
-        .filter-group select, .filter-group input { padding: 5px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
-        .hint-views-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
-        .hint-views-table table { width: 100%; border-collapse: collapse; }
-        .hint-views-table th, .hint-views-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
-        .hint-views-table th { background: #333; color: #ff8c00; }
-        .hint-views-table tr:hover { background: #333; }
-        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
-        .delete-btn { background: #ff4444; color: #fff; }
-        .action-btn:hover { opacity: 0.8; }
+        .filter-group label { color: #ff8c00; }
         .participant-name { color: #00ff00; }
         .challenge-name { color: #ff8c00; }
         .solved-status { font-size: 12px; }
-        .solved { color: #00ff00; }
-        .unsolved { color: #ff4444; }
         .relative-time { color: #888; font-style: italic; }
         .bulk-actions { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .bulk-btn { background: #ff4444; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
         .bulk-btn:hover { background: #cc3333; }
         .checkbox { margin-right: 8px; }
-        
-        /* Popup styles */
-        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
-        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
-        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
-        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
-        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
-        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .popup-btn.confirm { background: #ff4444; color: #fff; }
-        .popup-btn.cancel { background: #666; color: #fff; }
-        .popup-btn:hover { opacity: 0.8; }
-        .popup-box.success { border-color: #00ff00; }
-        .popup-box.success .popup-title { color: #00ff00; }
-    </style>
-</head>
+        .nav-btn.primary { background: #ff8c00; color: #000; }
+        .nav-btn.primary:hover { background: #e67e00; }
+    `
+}) %>
 <body>
     <div class="container">
         <div class="header">
@@ -194,7 +161,7 @@
         </div>
 
         <!-- Hint Views Table -->
-        <div class="hint-views-table">
+        <div class="data-table">
             <table id="hintViewsTable">
                 <thead>
                     <tr>
@@ -244,94 +211,34 @@
         </div>
     </div>
 
-    <!-- Delete Confirmation Popup -->
-    <div id="deletePopup" class="popup-overlay">
-        <div class="popup-box">
-            <div class="popup-title">⚠️ Delete Hint View</div>
-            <div class="popup-message" id="deleteMessage">
-                <!-- Message will be set dynamically -->
-            </div>
-            <div class="popup-buttons">
-                <button class="popup-btn confirm" onclick="confirmDelete()">🗑️ DELETE</button>
-                <button class="popup-btn cancel" onclick="hideDeletePopup()">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <%- include('partials/popup-result') %>
+    <%- include('partials/popup-confirm') %>
+    <%- include('partials/popup-text-confirm') %>
 
-    <!-- Result Popup -->
-    <div id="resultPopup" class="popup-overlay">
-        <div class="popup-box" id="resultBox">
-            <div class="popup-title" id="resultTitle">Result</div>
-            <div class="popup-message" id="resultMessage">Message</div>
-            <div class="popup-buttons">
-                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
-            </div>
-        </div>
-    </div>
-
+    <%- include('partials/admin-scripts', { token: token }) %>
+    
     <script>
-        const organizerToken = '<%= token %>';
-
-        function getRelativeTime(timestamp) {
-            const now = new Date();
-            const past = new Date(timestamp + 'Z');
-            const diffInSeconds = Math.floor((now - past) / 1000);
-            
-            if (diffInSeconds < 60) {
-                return diffInSeconds + ' secs ago';
-            } else if (diffInSeconds < 3600) {
-                const minutes = Math.floor(diffInSeconds / 60);
-                return minutes + ' mins ago';
-            } else if (diffInSeconds < 86400) {
-                const hours = Math.floor(diffInSeconds / 3600);
-                return hours + ' hrs ago';
-            } else {
-                const days = Math.floor(diffInSeconds / 86400);
-                return days + ' days ago';
-            }
-        }
-        
-        function updateRelativeTimes() {
-            document.querySelectorAll('.relative-time').forEach(function(element) {
-                const timestamp = element.getAttribute('data-timestamp');
-                element.textContent = getRelativeTime(timestamp);
-            });
-        }
-
+        // Hint management specific functionality
         function filterTable() {
             const participantFilter = document.getElementById('participantFilter').value;
             const challengeFilter = document.getElementById('challengeFilter').value;
             const statusFilter = document.getElementById('statusFilter').value;
-            const rows = document.querySelectorAll('#hintViewsTable tbody tr');
-
-            rows.forEach(row => {
-                const participant = row.dataset.participant;
-                const challenge = row.dataset.challenge;
-                const status = row.dataset.status;
-
-                const showParticipant = !participantFilter || participant === participantFilter;
-                const showChallenge = !challengeFilter || challenge === challengeFilter;
-                const showStatus = !statusFilter || status === statusFilter;
-
-                if (showParticipant && showChallenge && showStatus) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+            
+            adminUtils.filterTable('#hintViewsTable', {
+                participant: participantFilter,
+                challenge: challengeFilter,
+                status: statusFilter
             });
             updateSelectedCount();
         }
 
         function clearFilters() {
-            document.getElementById('participantFilter').value = '';
-            document.getElementById('challengeFilter').value = '';
-            document.getElementById('statusFilter').value = '';
+            adminUtils.clearFilters(['participantFilter', 'challengeFilter', 'statusFilter']);
             filterTable();
         }
 
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll').checked;
-            const checkboxes = document.querySelectorAll('.row-checkbox');
             const visibleRows = Array.from(document.querySelectorAll('#hintViewsTable tbody tr')).filter(row => row.style.display !== 'none');
             
             visibleRows.forEach(row => {
@@ -348,16 +255,26 @@
         }
 
         function deleteHintView(id, participantName, challengeName) {
-            // Store hint view details for deletion
-            window.pendingDelete = { 
-                type: 'single',
-                hintView: { id, participantName, challengeName }
-            };
-            
-            // Show custom confirmation popup
-            document.getElementById('deleteMessage').innerHTML = 
-                `Are you sure you want to delete the hint view from "<strong>${participantName}</strong>" for "<strong>${challengeName}</strong>"?<br><br>This action cannot be undone.`;
-            document.getElementById('deletePopup').style.display = 'flex';
+            popupManager.showConfirmation(
+                '⚠️ Delete Hint View',
+                `Are you sure you want to delete the hint view from "<strong>${participantName}</strong>" for "<strong>${challengeName}</strong>"?<br><br>This action cannot be undone.`,
+                async () => {
+                    try {
+                        const response = await adminUtils.makeRequest(`/api/hint-views/${id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            showResult('success', '✅ Hint View Deleted', `Hint view from "${participantName}" for "${challengeName}" has been deleted successfully.`, true);
+                        } else {
+                            const error = await response.json();
+                            showResult('error', '❌ Deletion Failed', 'Error deleting hint view: ' + error.message);
+                        }
+                    } catch (error) {
+                        showResult('error', '❌ Network Error', 'Error deleting hint view: ' + error.message);
+                    }
+                }
+            );
         }
 
         function bulkDelete() {
@@ -370,16 +287,28 @@
                 return;
             }
 
-            // Store selection details for deletion
-            window.pendingDelete = { 
-                type: 'bulk',
-                selected: selected
-            };
-            
-            // Show custom confirmation popup with count
-            document.getElementById('deleteMessage').innerHTML = 
-                `Are you sure you want to delete <strong>${selected.length}</strong> selected hint views?<br><br>This action cannot be undone.`;
-            document.getElementById('deletePopup').style.display = 'flex';
+            popupManager.showTextConfirmation(
+                '⚠️ WARNING: Delete Multiple Hint Views',
+                `This will permanently delete <strong>${selected.length}</strong> selected hint views.<br><br>Type <strong>"DELETE ${selected.length} VIEWS"</strong> to confirm:`,
+                `DELETE ${selected.length} VIEWS`,
+                async () => {
+                    try {
+                        const response = await adminUtils.makeRequest('/api/hint-views/bulk-delete', {
+                            method: 'DELETE',
+                            body: JSON.stringify({ ids: selected })
+                        });
+                        
+                        if (response.ok) {
+                            showResult('success', '✅ Hint Views Deleted', `${selected.length} hint views have been deleted successfully.`, true);
+                        } else {
+                            const error = await response.json();
+                            showResult('error', '❌ Deletion Failed', 'Error deleting hint views: ' + error.message);
+                        }
+                    } catch (error) {
+                        showResult('error', '❌ Network Error', 'Error deleting hint views: ' + error.message);
+                    }
+                }
+            );
         }
 
         function exportData() {
@@ -393,110 +322,6 @@
             params.append('token', organizerToken);
             window.open(`/api/hint-views/export?${params.toString()}`, '_blank');
         }
-
-        // Popup management functions
-        function hideDeletePopup() {
-            document.getElementById('deletePopup').style.display = 'none';
-        }
-
-        function showResult(type, title, message) {
-            const resultBox = document.getElementById('resultBox');
-            const resultTitle = document.getElementById('resultTitle');
-            const resultMessage = document.getElementById('resultMessage');
-            
-            resultTitle.textContent = title;
-            resultMessage.innerHTML = message;
-            
-            if (type === 'success') {
-                resultBox.classList.add('success');
-            } else {
-                resultBox.classList.remove('success');
-            }
-            
-            document.getElementById('resultPopup').style.display = 'flex';
-        }
-
-        function hideResultPopup() {
-            document.getElementById('resultPopup').style.display = 'none';
-        }
-
-        async function confirmDelete() {
-            hideDeletePopup();
-            
-            if (window.pendingDelete.type === 'single') {
-                await performSingleDelete();
-            } else if (window.pendingDelete.type === 'bulk') {
-                await performBulkDelete();
-            }
-        }
-
-        async function performSingleDelete() {
-            const hintView = window.pendingDelete.hintView;
-            
-            try {
-                const response = await fetch(`/api/hint-views/${hintView.id}?token=${organizerToken}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    showResult('success', '✅ Hint View Deleted', `Hint view from "${hintView.participantName}" for "${hintView.challengeName}" has been deleted successfully.`);
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    const error = await response.json();
-                    showResult('error', '❌ Deletion Failed', 'Error deleting hint view: ' + error.message);
-                }
-            } catch (error) {
-                showResult('error', '❌ Network Error', 'Error deleting hint view: ' + error.message);
-            }
-        }
-
-        async function performBulkDelete() {
-            const selected = window.pendingDelete.selected;
-            
-            try {
-                const response = await fetch(`/api/hint-views/bulk-delete?token=${organizerToken}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids: selected })
-                });
-                
-                if (response.ok) {
-                    showResult('success', '✅ Hint Views Deleted', `${selected.length} hint views have been deleted successfully.`);
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    const error = await response.json();
-                    showResult('error', '❌ Deletion Failed', 'Error deleting hint views: ' + error.message);
-                }
-            } catch (error) {
-                showResult('error', '❌ Network Error', 'Error deleting hint views: ' + error.message);
-            }
-        }
-
-        // Update times on page load and every 30 seconds
-        updateRelativeTimes();
-        setInterval(updateRelativeTimes, 30000);
-
-        // Close popups when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('popup-overlay')) {
-                hideDeletePopup();
-                hideResultPopup();
-            }
-        });
-
-        // Handle Enter key in popups
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                if (document.getElementById('deletePopup').style.display === 'flex') {
-                    confirmDelete();
-                } else if (document.getElementById('resultPopup').style.display === 'flex') {
-                    hideResultPopup();
-                }
-            } else if (e.key === 'Escape') {
-                hideDeletePopup();
-                hideResultPopup();
-            }
-        });
     </script>
 </body>
 </html>

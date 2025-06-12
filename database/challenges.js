@@ -12,7 +12,8 @@ async function getChallengesWithSolutions(participantToken) {
   const pool = getDatabase();
   const result = await pool.query(`
     SELECT c.*, 
-           CASE WHEN s.is_correct = 1 THEN true ELSE false END as solved
+           CASE WHEN s.is_correct = 1 THEN true ELSE false END as solved,
+           CASE WHEN h.participant_id IS NOT NULL THEN true ELSE false END as hint_viewed
     FROM challenges c
     LEFT JOIN (
       SELECT s.challenge_id, MAX(CASE WHEN s.is_correct = true THEN 1 ELSE 0 END) as is_correct
@@ -21,6 +22,12 @@ async function getChallengesWithSolutions(participantToken) {
       WHERE p.token = $1 
       GROUP BY s.challenge_id
     ) s ON c.id = s.challenge_id
+    LEFT JOIN (
+      SELECT h.challenge_id, h.participant_id
+      FROM hint_views h
+      JOIN participants p ON h.participant_id = p.id
+      WHERE p.token = $1
+    ) h ON c.id = h.challenge_id
     ORDER BY c.id
   `, [participantToken]);
   return result.rows;

@@ -1,55 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>CTF Participant Management</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .nav-buttons { margin-bottom: 20px; }
-        .nav-btn { background: #666; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px; display: inline-block; }
-        .nav-btn:hover { background: #777; }
-        .nav-btn.primary { background: #00ff00; color: #000; }
-        .nav-btn.primary:hover { background: #00cc00; }
-        .participant-form { background: #2d2d2d; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: #00ff00; font-weight: bold; }
-        .form-group input { width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
-        .form-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; }
-        .form-btn:hover { background: #00cc00; }
-        .form-btn.cancel { background: #666; color: #fff; }
-        .form-btn.cancel:hover { background: #777; }
-        .participants-table { background: #2d2d2d; border-radius: 8px; overflow: hidden; }
-        .participants-table table { width: 100%; border-collapse: collapse; }
-        .participants-table th, .participants-table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
-        .participants-table th { background: #333; color: #00ff00; }
-        .participants-table tr:hover { background: #333; }
-        .action-btn { padding: 5px 10px; margin: 2px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
-        .edit-btn { background: #ff6b35; color: #fff; }
-        .delete-btn { background: #ff4444; color: #fff; }
-        .action-btn:hover { opacity: 0.8; }
-        .hidden { display: none; }
-        .token { font-family: monospace; background: #1a1a1a; padding: 2px 4px; border-radius: 3px; color: #00ff00; }
-        .stats { display: flex; justify-content: space-around; margin: 20px 0; }
-        .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 150px; }
-        .stat-number { font-size: 2em; color: #00ff00; font-weight: bold; }
-        
-        /* Popup styles */
-        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
-        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
-        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
-        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
-        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
-        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .popup-btn.confirm { background: #ff4444; color: #fff; }
-        .popup-btn.cancel { background: #666; color: #fff; }
-        .popup-btn:hover { opacity: 0.8; }
-        .popup-box.success { border-color: #00ff00; }
-        .popup-box.success .popup-title { color: #00ff00; }
-    </style>
-</head>
+<%- include('partials/admin-head', { title: 'CTF Participant Management' }) %>
 <body>
     <div class="container">
         <div class="header">
@@ -77,7 +28,7 @@
         </div>
 
         <!-- Create/Edit Form -->
-        <div id="participantForm" class="participant-form hidden">
+        <div id="participantForm" class="form-container hidden">
             <h3 id="formTitle">Create New Participant</h3>
             <form id="participantFormElement">
                 <input type="hidden" id="originalToken" name="originalToken">
@@ -95,7 +46,7 @@
         </div>
 
         <!-- Participants Table -->
-        <div class="participants-table">
+        <div class="data-table">
             <table>
                 <thead>
                     <tr>
@@ -128,70 +79,17 @@
         </div>
     </div>
 
-    <!-- Delete Confirmation Popup -->
-    <div id="deletePopup" class="popup-overlay">
-        <div class="popup-box">
-            <div class="popup-title">⚠️ Delete Participant</div>
-            <div class="popup-message" id="deleteMessage">
-                <!-- Message will be set dynamically -->
-            </div>
-            <input type="text" id="deleteConfirmInput" class="popup-input" placeholder="Type confirmation text here...">
-            <div class="popup-buttons">
-                <button class="popup-btn confirm" onclick="confirmDelete()">🗑️ DELETE</button>
-                <button class="popup-btn cancel" onclick="hideDeletePopup()">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <%- include('partials/popup-confirm') %>
+    <%- include('partials/popup-result') %>
 
-    <!-- Result Popup -->
-    <div id="resultPopup" class="popup-overlay">
-        <div class="popup-box" id="resultBox">
-            <div class="popup-title" id="resultTitle">Result</div>
-            <div class="popup-message" id="resultMessage">Message</div>
-            <div class="popup-buttons">
-                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
-            </div>
-        </div>
-    </div>
-
+    <%- include('partials/admin-scripts', { token: token }) %>
+    
     <script>
         let isEditing = false;
-        const organizerToken = '<%= token %>';
-
-        function getRelativeTime(timestamp) {
-            const now = new Date();
-            // PostgreSQL CURRENT_TIMESTAMP returns UTC, so treat the timestamp as UTC
-            const past = new Date(timestamp + 'Z');
-            const diffInSeconds = Math.floor((now - past) / 1000);
-            
-            if (diffInSeconds < 60) {
-                return diffInSeconds + ' secs';
-            } else if (diffInSeconds < 3600) {
-                const minutes = Math.floor(diffInSeconds / 60);
-                return minutes + ' mins';
-            } else if (diffInSeconds < 86400) {
-                const hours = Math.floor(diffInSeconds / 3600);
-                return hours + ' hrs';
-            } else if (diffInSeconds < 2592000) {
-                const days = Math.floor(diffInSeconds / 86400);
-                return days + ' days';
-            } else {
-                const months = Math.floor(diffInSeconds / 2592000);
-                return months + ' months';
-            }
-        }
-        
-        function updateRelativeTimes() {
-            document.querySelectorAll('.relative-time').forEach(function(element) {
-                const timestamp = element.getAttribute('data-timestamp');
-                element.textContent = getRelativeTime(timestamp);
-            });
-        }
 
         function showCreateForm() {
-            document.getElementById('participantForm').classList.remove('hidden');
-            document.getElementById('formTitle').textContent = 'Create New Participant';
-            document.getElementById('submitBtn').textContent = 'Create Participant';
+            adminUtils.toggleForm('participantForm', 'formTitle', 'submitBtn', false, 
+                'Create New Participant', 'Edit Participant', 'Create Participant', 'Update Participant');
             document.getElementById('participantFormElement').reset();
             document.getElementById('originalToken').value = '';
             document.getElementById('token').disabled = false;
@@ -199,9 +97,8 @@
         }
 
         function editParticipant(token, name) {
-            document.getElementById('participantForm').classList.remove('hidden');
-            document.getElementById('formTitle').textContent = 'Edit Participant';
-            document.getElementById('submitBtn').textContent = 'Update Participant';
+            adminUtils.toggleForm('participantForm', 'formTitle', 'submitBtn', true, 
+                'Create New Participant', 'Edit Participant', 'Create Participant', 'Update Participant');
             document.getElementById('originalToken').value = token;
             document.getElementById('token').value = token;
             document.getElementById('name').value = name;
@@ -210,78 +107,35 @@
         }
 
         function hideForm() {
-            document.getElementById('participantForm').classList.add('hidden');
-            document.getElementById('participantFormElement').reset();
+            adminUtils.hideForm('participantForm', 'participantFormElement');
             document.getElementById('token').disabled = false;
             isEditing = false;
         }
 
         function deleteParticipant(token, name) {
-            // Store participant details for deletion
-            window.pendingDelete = { token, name };
-            
-            // Show custom confirmation popup
-            document.getElementById('deleteMessage').innerHTML = 
-                `This will permanently delete participant "<strong>${name}</strong>" (${token}) and all their submissions.<br><br>Type <strong>"DELETE ${name}"</strong> to confirm:`;
-            document.getElementById('deleteConfirmInput').placeholder = `Type "DELETE ${name}" to confirm`;
-            document.getElementById('deleteConfirmInput').value = '';
-            document.getElementById('deletePopup').style.display = 'flex';
-            document.getElementById('deleteConfirmInput').focus();
-        }
-
-        function hideDeletePopup() {
-            document.getElementById('deletePopup').style.display = 'none';
-        }
-
-        async function confirmDelete() {
-            const input = document.getElementById('deleteConfirmInput').value;
-            const expectedInput = `DELETE ${window.pendingDelete.name}`;
-            
-            if (input !== expectedInput) {
-                showResult('error', '❌ Invalid Confirmation', `Please type "${expectedInput}" exactly as shown.`);
-                return;
-            }
-            
-            hideDeletePopup();
-            
-            try {
-                const response = await fetch(`/api/participants/${encodeURIComponent(window.pendingDelete.token)}?token=${organizerToken}`, {
-                    method: 'DELETE'
-                });
-                
-                if (response.ok) {
-                    showResult('success', '✅ Participant Deleted', `Participant "${window.pendingDelete.name}" has been deleted successfully.`);
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    const error = await response.json();
-                    showResult('error', '❌ Deletion Failed', 'Error deleting participant: ' + error.message);
+            window.popupManager.showConfirmation(
+                '⚠️ Delete Participant',
+                `This will permanently delete participant "<strong>${name}</strong>" (${token}) and all their submissions.<br><br>Are you sure you want to continue?`,
+                async () => {
+                    try {
+                        const response = await adminUtils.makeRequest(`/api/participants/${encodeURIComponent(token)}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (response.ok) {
+                            showResult('success', '✅ Participant Deleted', `Participant "${name}" has been deleted successfully.`, true);
+                        } else {
+                            const error = await response.json();
+                            showResult('error', '❌ Deletion Failed', 'Error deleting participant: ' + error.message);
+                        }
+                    } catch (error) {
+                        showResult('error', '❌ Network Error', 'Error deleting participant: ' + error.message);
+                    }
                 }
-            } catch (error) {
-                showResult('error', '❌ Network Error', 'Error deleting participant: ' + error.message);
-            }
+            );
         }
 
-        function showResult(type, title, message) {
-            const resultBox = document.getElementById('resultBox');
-            const resultTitle = document.getElementById('resultTitle');
-            const resultMessage = document.getElementById('resultMessage');
-            
-            resultTitle.textContent = title;
-            resultMessage.innerHTML = message;
-            
-            if (type === 'success') {
-                resultBox.classList.add('success');
-            } else {
-                resultBox.classList.remove('success');
-            }
-            
-            document.getElementById('resultPopup').style.display = 'flex';
-        }
-
-        function hideResultPopup() {
-            document.getElementById('resultPopup').style.display = 'none';
-        }
-
+        // Form submission handler
         document.getElementById('participantFormElement').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -291,54 +145,8 @@
                 name: formData.get('name')
             };
 
-            try {
-                let response;
-                if (isEditing) {
-                    const originalToken = formData.get('originalToken');
-                    response = await fetch(`/api/participants/${encodeURIComponent(originalToken)}?token=${organizerToken}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(participantData)
-                    });
-                } else {
-                    response = await fetch(`/api/participants?token=${organizerToken}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(participantData)
-                    });
-                }
-
-                if (response.ok) {
-                    showResult('success', '✅ Success', isEditing ? 'Participant updated successfully' : 'Participant created successfully');
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    const error = await response.json();
-                    showResult('error', '❌ Error', 'Error: ' + error.message);
-                }
-            } catch (error) {
-                showResult('error', '❌ Network Error', 'Error: ' + error.message);
-            }
-        });
-
-        // Update times on page load
-        updateRelativeTimes();
-        
-        // Update times every 30 seconds
-        setInterval(updateRelativeTimes, 30000);
-
-        // Close popups when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('popup-overlay')) {
-                hideDeletePopup();
-                hideResultPopup();
-            }
-        });
-
-        // Handle Enter key in confirmation input
-        document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                confirmDelete();
-            }
+            const endpoint = isEditing ? `/api/participants/${encodeURIComponent(formData.get('originalToken'))}` : '/api/participants';
+            await adminUtils.submitForm(endpoint, participantData, isEditing, 'Participant');
         });
     </script>
 </body>

@@ -1,0 +1,13 @@
+<!-- Simple Confirmation Popup -->
+<div id="deleteConfirmPopup" class="popup-overlay">
+    <div class="popup-box">
+        <div class="popup-title">⚠️ Confirm Action</div>
+        <div class="popup-message" id="deleteConfirmMessage">
+            <!-- Message will be set dynamically -->
+        </div>
+        <div class="popup-buttons">
+            <button class="popup-btn confirm" onclick="window.popupManager.executeConfirmation()">🗑️ CONFIRM</button>
+            <button class="popup-btn cancel" onclick="window.popupManager.cancelConfirmation()">Cancel</button>
+        </div>
+    </div>
+</div>
