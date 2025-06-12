@@ -293,6 +293,16 @@ app.post('/api/organizer/validate', async (req, res) => {
 
 // API endpoints for challenge management
 
+// Get all challenges
+app.get('/api/challenges', requireOrganizerAuth, async (req, res) => {
+  try {
+    const challenges = await getAllChallenges();
+    res.json(challenges);
+  } catch (error) {
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
 // Create new challenge
 app.post('/api/challenges', requireOrganizerAuth, async (req, res) => {
   const { name, description, flag, points, hint } = req.body;
@@ -325,6 +335,35 @@ app.put('/api/challenges/:id', requireOrganizerAuth, async (req, res) => {
     }
     res.json({ success: true, challenge: result });
   } catch (error) {
+    res.status(500).json({ error: 'Database error', message: error.message });
+  }
+});
+
+// Delete all challenges and associated data (must come before :id route)
+app.delete('/api/challenges/delete-all', requireOrganizerAuth, async (req, res) => {
+  try {
+    const { getDatabase } = require('./database');
+    const pool = getDatabase();
+    
+    // Count existing data before deletion
+    const challengeCount = await pool.query('SELECT COUNT(*) as count FROM challenges');
+    const submissionCount = await pool.query('SELECT COUNT(*) as count FROM submissions');
+    const hintViewCount = await pool.query('SELECT COUNT(*) as count FROM hint_views');
+    
+    // Delete all related data in correct order (foreign key constraints)
+    await pool.query('DELETE FROM hint_views');
+    await pool.query('DELETE FROM submissions');
+    await pool.query('DELETE FROM challenges');
+    
+    res.json({ 
+      success: true, 
+      message: 'All challenges and related data deleted successfully',
+      challengesDeleted: parseInt(challengeCount.rows[0].count),
+      submissionsDeleted: parseInt(submissionCount.rows[0].count),
+      hintViewsDeleted: parseInt(hintViewCount.rows[0].count)
+    });
+  } catch (error) {
+    console.error('Delete all challenges error:', error);
     res.status(500).json({ error: 'Database error', message: error.message });
   }
 });

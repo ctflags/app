@@ -33,6 +33,20 @@
         .hidden { display: none; }
         .points { color: #00ff00; font-weight: bold; }
         .flag { font-family: monospace; background: #1a1a1a; padding: 2px 4px; border-radius: 3px; }
+        
+        /* Popup styles */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
+        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
+        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
+        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .popup-btn.confirm { background: #ff4444; color: #fff; }
+        .popup-btn.cancel { background: #666; color: #fff; }
+        .popup-btn:hover { opacity: 0.8; }
+        .warning-list { background: #1a1a1a; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .warning-list ul { margin: 0; padding-left: 20px; color: #ff8c00; }
     </style>
 </head>
 <body>
@@ -42,6 +56,7 @@
             <div class="nav-buttons">
                 <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
                 <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Challenge</button>
+                <button onclick="deleteAllChallenges()" class="nav-btn" style="background: #ff4444; color: #fff;">🗑️ Delete All Challenges</button>
             </div>
         </div>
 
@@ -111,6 +126,76 @@
         </div>
     </div>
 
+    <!-- Custom Popup for Delete All Confirmations -->
+    <div id="deleteAllPopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title">⚠️ WARNING: Delete All Challenges</div>
+            <div class="popup-message">
+                This will permanently delete ALL challenges and their associated data.
+                <div class="warning-list">
+                    <ul>
+                        <li>All challenges</li>
+                        <li>All submissions</li>
+                        <li>All hint views</li>
+                    </ul>
+                </div>
+                Type <strong>"DELETE ALL CHALLENGES"</strong> to confirm:
+            </div>
+            <input type="text" id="deleteConfirmInput" class="popup-input" placeholder="Type confirmation text here...">
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="confirmDeleteAll()">🗑️ DELETE ALL</button>
+                <button class="popup-btn cancel" onclick="hideDeleteAllPopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Confirmation Popup for Single Challenge Delete -->
+    <div id="deleteConfirmPopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title">⚠️ Delete Challenge</div>
+            <div class="popup-message" id="deleteConfirmMessage">
+                <!-- Message will be set dynamically -->
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="confirmSingleDelete()">🗑️ DELETE</button>
+                <button class="popup-btn cancel" onclick="hideDeleteConfirmPopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Confirmation Popup -->
+    <div id="finalConfirmPopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title">🚨 FINAL CONFIRMATION</div>
+            <div class="popup-message">
+                Are you absolutely sure? This action cannot be undone!
+                <div class="warning-list">
+                    <ul>
+                        <li><span id="challengeCount">0</span> challenges will be deleted</li>
+                        <li><span id="submissionCount">0</span> submissions will be deleted</li>
+                        <li><span id="hintViewCount">0</span> hint views will be deleted</li>
+                    </ul>
+                </div>
+                <strong>This action is permanent and irreversible!</strong>
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="executeDeleteAll()">🗑️ YES, DELETE EVERYTHING</button>
+                <button class="popup-btn cancel" onclick="hideFinalConfirmPopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Popup -->
+    <div id="resultPopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title" id="resultTitle">✅ Success</div>
+            <div class="popup-message" id="resultMessage">Operation completed successfully</div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isEditing = false;
         const organizerToken = '<%= token %>';
@@ -143,25 +228,140 @@
             isEditing = false;
         }
 
-        async function deleteChallenge(id, name) {
-            if (confirm(`Are you sure you want to delete "${name}"? This will also delete all related submissions.`)) {
-                try {
-                    const response = await fetch(`/api/challenges/${id}?token=${organizerToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        //alert('Challenge deleted successfully');
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Error deleting challenge: ' + error.message);
-                    }
-                } catch (error) {
-                    alert('Error deleting challenge: ' + error.message);
+        function deleteChallenge(id, name) {
+            // Store the challenge details for deletion
+            window.pendingDelete = { id, name };
+            
+            // Show simple confirmation popup
+            document.getElementById('deleteConfirmMessage').innerHTML = 
+                `This will permanently delete "<strong>${name}</strong>" and all related submissions and hint views.<br><br>Are you sure you want to continue?`;
+            document.getElementById('deleteConfirmPopup').style.display = 'flex';
+        }
+
+        function deleteAllChallenges() {
+            // Reset to original state for delete all
+            window.pendingDelete = null;
+            document.getElementById('deleteAllPopup').querySelector('.popup-title').textContent = '⚠️ WARNING: Delete All Challenges';
+            document.getElementById('deleteAllPopup').querySelector('.popup-message').innerHTML = 
+                `This will permanently delete ALL challenges and their associated data.
+                <div class="warning-list">
+                    <ul>
+                        <li>All challenges</li>
+                        <li>All submissions</li>
+                        <li>All hint views</li>
+                    </ul>
+                </div>
+                Type <strong>"DELETE ALL CHALLENGES"</strong> to confirm:`;
+            document.getElementById('deleteConfirmInput').placeholder = 'Type confirmation text here...';
+            document.getElementById('deleteAllPopup').style.display = 'flex';
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('deleteConfirmInput').focus();
+        }
+
+        function hideDeleteAllPopup() {
+            document.getElementById('deleteAllPopup').style.display = 'none';
+        }
+
+        function hideDeleteConfirmPopup() {
+            document.getElementById('deleteConfirmPopup').style.display = 'none';
+        }
+
+        async function confirmSingleDelete() {
+            hideDeleteConfirmPopup();
+            
+            try {
+                const response = await fetch(`/api/challenges/${window.pendingDelete.id}?token=${organizerToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResult('success', '✅ Challenge Deleted', `Challenge "${window.pendingDelete.name}" has been deleted successfully.`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', error.message);
                 }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Failed to connect to server. Please try again.');
             }
         }
+
+        async function confirmDeleteAll() {
+            const input = document.getElementById('deleteConfirmInput').value;
+            
+            // Handle delete all challenges only
+            if (input !== 'DELETE ALL CHALLENGES') {
+                showResult('error', '❌ Invalid Confirmation', 'Please type "DELETE ALL CHALLENGES" exactly as shown.');
+                return;
+            }
+            
+            hideDeleteAllPopup();
+            
+            // Get current counts for confirmation
+            try {
+                const response = await fetch(`/api/challenges?token=${organizerToken}`);
+                const challenges = await response.json();
+                document.getElementById('challengeCount').textContent = challenges.length;
+                
+                // Show final confirmation with counts
+                document.getElementById('finalConfirmPopup').style.display = 'flex';
+            } catch (error) {
+                showResult('error', '❌ Error', 'Failed to get current data counts.');
+            }
+        }
+
+        function hideFinalConfirmPopup() {
+            document.getElementById('finalConfirmPopup').style.display = 'none';
+        }
+
+        async function executeDeleteAll() {
+            hideFinalConfirmPopup();
+            
+            try {
+                const response = await fetch(`/api/challenges/delete-all?token=${organizerToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult('success', '✅ Successfully Deleted', 
+                        `• ${result.challengesDeleted} challenges\n• ${result.submissionsDeleted} submissions\n• ${result.hintViewsDeleted} hint views`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', error.message);
+                }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Failed to connect to server. Please try again.');
+            }
+        }
+
+        function showResult(type, title, message) {
+            document.getElementById('resultTitle').textContent = title;
+            document.getElementById('resultMessage').innerHTML = message.replace(/\n/g, '<br>');
+            document.getElementById('resultPopup').style.display = 'flex';
+        }
+
+        function hideResultPopup() {
+            document.getElementById('resultPopup').style.display = 'none';
+        }
+
+        // Close popups when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('popup-overlay')) {
+                hideDeleteAllPopup();
+                hideDeleteConfirmPopup();
+                hideFinalConfirmPopup();
+                hideResultPopup();
+            }
+        });
+
+        // Handle Enter key in confirmation input
+        document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                confirmDeleteAll();
+            }
+        });
 
         document.getElementById('challengeFormElement').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -193,14 +393,14 @@
                 }
 
                 if (response.ok) {
-                    alert(isEditing ? 'Challenge updated successfully' : 'Challenge created successfully');
-                    location.reload();
+                    showResult('success', '✅ Success', isEditing ? 'Challenge updated successfully' : 'Challenge created successfully');
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     const error = await response.json();
-                    alert('Error: ' + error.message);
+                    showResult('error', '❌ Error', 'Error: ' + error.message);
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                showResult('error', '❌ Network Error', 'Error: ' + error.message);
             }
         });
     </script>

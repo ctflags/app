@@ -42,6 +42,20 @@
         .filter-group select { padding: 5px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; }
         .participant-name { color: #ff6b35; }
         .challenge-name { color: #00ff00; }
+        
+        /* Popup styles */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
+        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
+        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
+        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .popup-btn.confirm { background: #ff4444; color: #fff; }
+        .popup-btn.cancel { background: #666; color: #fff; }
+        .popup-btn:hover { opacity: 0.8; }
+        .popup-box.success { border-color: #00ff00; }
+        .popup-box.success .popup-title { color: #00ff00; }
     </style>
 </head>
 <body>
@@ -193,6 +207,17 @@
         </div>
     </div>
 
+    <!-- Result Popup -->
+    <div id="resultPopup" class="popup-overlay">
+        <div class="popup-box" id="resultBox">
+            <div class="popup-title" id="resultTitle">Result</div>
+            <div class="popup-message" id="resultMessage">Message</div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isEditing = false;
         const organizerToken = '<%= token %>';
@@ -225,21 +250,20 @@
         }
 
         async function deleteSubmission(id, participantName, challengeName) {
-            if (confirm(`Are you sure you want to delete submission from "${participantName}" for "${challengeName}"?`)) {
-                try {
-                    const response = await fetch(`/api/submissions/${id}?token=${organizerToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Error deleting submission: ' + error.message);
-                    }
-                } catch (error) {
-                    alert('Error deleting submission: ' + error.message);
+            try {
+                const response = await fetch(`/api/submissions/${id}?token=${organizerToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResult('success', '✅ Submission Deleted', `Submission from "${participantName}" for "${challengeName}" has been deleted successfully.`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting submission: ' + error.message);
                 }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting submission: ' + error.message);
             }
         }
 
@@ -264,6 +288,28 @@
                     row.style.display = 'none';
                 }
             });
+        }
+
+
+        function showResult(type, title, message) {
+            const resultBox = document.getElementById('resultBox');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            resultTitle.textContent = title;
+            resultMessage.innerHTML = message;
+            
+            if (type === 'success') {
+                resultBox.classList.add('success');
+            } else {
+                resultBox.classList.remove('success');
+            }
+            
+            document.getElementById('resultPopup').style.display = 'flex';
+        }
+
+        function hideResultPopup() {
+            document.getElementById('resultPopup').style.display = 'none';
         }
 
         document.getElementById('submissionFormElement').addEventListener('submit', async function(e) {
@@ -298,13 +344,21 @@
                 }
 
                 if (response.ok) {
-                    location.reload();
+                    showResult('success', '✅ Success', isEditing ? 'Submission updated successfully' : 'Submission created successfully');
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     const error = await response.json();
-                    alert('Error: ' + error.message);
+                    showResult('error', '❌ Error', 'Error: ' + error.message);
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                showResult('error', '❌ Network Error', 'Error: ' + error.message);
+            }
+        });
+
+        // Close popups when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('popup-overlay')) {
+                hideResultPopup();
             }
         });
     </script>

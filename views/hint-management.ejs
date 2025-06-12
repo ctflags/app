@@ -57,6 +57,20 @@
         .bulk-btn { background: #ff4444; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
         .bulk-btn:hover { background: #cc3333; }
         .checkbox { margin-right: 8px; }
+        
+        /* Popup styles */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
+        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
+        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
+        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .popup-btn.confirm { background: #ff4444; color: #fff; }
+        .popup-btn.cancel { background: #666; color: #fff; }
+        .popup-btn:hover { opacity: 0.8; }
+        .popup-box.success { border-color: #00ff00; }
+        .popup-box.success .popup-title { color: #00ff00; }
     </style>
 </head>
 <body>
@@ -230,6 +244,31 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Popup -->
+    <div id="deletePopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title">⚠️ Delete Hint View</div>
+            <div class="popup-message" id="deleteMessage">
+                <!-- Message will be set dynamically -->
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="confirmDelete()">🗑️ DELETE</button>
+                <button class="popup-btn cancel" onclick="hideDeletePopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Popup -->
+    <div id="resultPopup" class="popup-overlay">
+        <div class="popup-box" id="resultBox">
+            <div class="popup-title" id="resultTitle">Result</div>
+            <div class="popup-message" id="resultMessage">Message</div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const organizerToken = '<%= token %>';
 
@@ -308,53 +347,39 @@
             document.getElementById('selectedCount').textContent = visibleCheckboxes.length + ' selected';
         }
 
-        async function deleteHintView(id, participantName, challengeName) {
-            if (confirm(`Are you sure you want to delete the hint view from "${participantName}" for "${challengeName}"?`)) {
-                try {
-                    const response = await fetch(`/api/hint-views/${id}?token=${organizerToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Error deleting hint view: ' + error.message);
-                    }
-                } catch (error) {
-                    alert('Error deleting hint view: ' + error.message);
-                }
-            }
+        function deleteHintView(id, participantName, challengeName) {
+            // Store hint view details for deletion
+            window.pendingDelete = { 
+                type: 'single',
+                hintView: { id, participantName, challengeName }
+            };
+            
+            // Show custom confirmation popup
+            document.getElementById('deleteMessage').innerHTML = 
+                `Are you sure you want to delete the hint view from "<strong>${participantName}</strong>" for "<strong>${challengeName}</strong>"?<br><br>This action cannot be undone.`;
+            document.getElementById('deletePopup').style.display = 'flex';
         }
 
-        async function bulkDelete() {
+        function bulkDelete() {
             const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
                 .filter(cb => cb.closest('tr').style.display !== 'none')
                 .map(cb => cb.value);
             
             if (selected.length === 0) {
-                alert('Please select hint views to delete.');
+                showResult('error', '❌ No Selection', 'Please select hint views to delete.');
                 return;
             }
 
-            if (confirm(`Are you sure you want to delete ${selected.length} selected hint views? This action cannot be undone.`)) {
-                try {
-                    const response = await fetch(`/api/hint-views/bulk-delete?token=${organizerToken}`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ids: selected })
-                    });
-                    
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Error deleting hint views: ' + error.message);
-                    }
-                } catch (error) {
-                    alert('Error deleting hint views: ' + error.message);
-                }
-            }
+            // Store selection details for deletion
+            window.pendingDelete = { 
+                type: 'bulk',
+                selected: selected
+            };
+            
+            // Show custom confirmation popup with count
+            document.getElementById('deleteMessage').innerHTML = 
+                `Are you sure you want to delete <strong>${selected.length}</strong> selected hint views?<br><br>This action cannot be undone.`;
+            document.getElementById('deletePopup').style.display = 'flex';
         }
 
         function exportData() {
@@ -369,9 +394,109 @@
             window.open(`/api/hint-views/export?${params.toString()}`, '_blank');
         }
 
+        // Popup management functions
+        function hideDeletePopup() {
+            document.getElementById('deletePopup').style.display = 'none';
+        }
+
+        function showResult(type, title, message) {
+            const resultBox = document.getElementById('resultBox');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            resultTitle.textContent = title;
+            resultMessage.innerHTML = message;
+            
+            if (type === 'success') {
+                resultBox.classList.add('success');
+            } else {
+                resultBox.classList.remove('success');
+            }
+            
+            document.getElementById('resultPopup').style.display = 'flex';
+        }
+
+        function hideResultPopup() {
+            document.getElementById('resultPopup').style.display = 'none';
+        }
+
+        async function confirmDelete() {
+            hideDeletePopup();
+            
+            if (window.pendingDelete.type === 'single') {
+                await performSingleDelete();
+            } else if (window.pendingDelete.type === 'bulk') {
+                await performBulkDelete();
+            }
+        }
+
+        async function performSingleDelete() {
+            const hintView = window.pendingDelete.hintView;
+            
+            try {
+                const response = await fetch(`/api/hint-views/${hintView.id}?token=${organizerToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResult('success', '✅ Hint View Deleted', `Hint view from "${hintView.participantName}" for "${hintView.challengeName}" has been deleted successfully.`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting hint view: ' + error.message);
+                }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting hint view: ' + error.message);
+            }
+        }
+
+        async function performBulkDelete() {
+            const selected = window.pendingDelete.selected;
+            
+            try {
+                const response = await fetch(`/api/hint-views/bulk-delete?token=${organizerToken}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: selected })
+                });
+                
+                if (response.ok) {
+                    showResult('success', '✅ Hint Views Deleted', `${selected.length} hint views have been deleted successfully.`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting hint views: ' + error.message);
+                }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting hint views: ' + error.message);
+            }
+        }
+
         // Update times on page load and every 30 seconds
         updateRelativeTimes();
         setInterval(updateRelativeTimes, 30000);
+
+        // Close popups when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('popup-overlay')) {
+                hideDeletePopup();
+                hideResultPopup();
+            }
+        });
+
+        // Handle Enter key in popups
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                if (document.getElementById('deletePopup').style.display === 'flex') {
+                    confirmDelete();
+                } else if (document.getElementById('resultPopup').style.display === 'flex') {
+                    hideResultPopup();
+                }
+            } else if (e.key === 'Escape') {
+                hideDeletePopup();
+                hideResultPopup();
+            }
+        });
     </script>
 </body>
 </html>

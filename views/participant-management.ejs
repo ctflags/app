@@ -34,6 +34,20 @@
         .stats { display: flex; justify-content: space-around; margin: 20px 0; }
         .stat-box { background: #2d2d2d; padding: 20px; border-radius: 8px; text-align: center; min-width: 150px; }
         .stat-number { font-size: 2em; color: #00ff00; font-weight: bold; }
+        
+        /* Popup styles */
+        .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .popup-box { background: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; border: 2px solid #ff4444; }
+        .popup-title { color: #ff4444; font-size: 1.5em; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .popup-message { color: #fff; margin-bottom: 20px; line-height: 1.5; }
+        .popup-input { width: 100%; padding: 12px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; margin: 10px 0; font-size: 14px; }
+        .popup-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .popup-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .popup-btn.confirm { background: #ff4444; color: #fff; }
+        .popup-btn.cancel { background: #666; color: #fff; }
+        .popup-btn:hover { opacity: 0.8; }
+        .popup-box.success { border-color: #00ff00; }
+        .popup-box.success .popup-title { color: #00ff00; }
     </style>
 </head>
 <body>
@@ -114,6 +128,32 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Popup -->
+    <div id="deletePopup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-title">⚠️ Delete Participant</div>
+            <div class="popup-message" id="deleteMessage">
+                <!-- Message will be set dynamically -->
+            </div>
+            <input type="text" id="deleteConfirmInput" class="popup-input" placeholder="Type confirmation text here...">
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="confirmDelete()">🗑️ DELETE</button>
+                <button class="popup-btn cancel" onclick="hideDeletePopup()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Popup -->
+    <div id="resultPopup" class="popup-overlay">
+        <div class="popup-box" id="resultBox">
+            <div class="popup-title" id="resultTitle">Result</div>
+            <div class="popup-message" id="resultMessage">Message</div>
+            <div class="popup-buttons">
+                <button class="popup-btn confirm" onclick="hideResultPopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isEditing = false;
         const organizerToken = '<%= token %>';
@@ -176,23 +216,70 @@
             isEditing = false;
         }
 
-        async function deleteParticipant(token, name) {
-            if (confirm(`Are you sure you want to delete participant "${name}" (${token})? This will also delete all their submissions.`)) {
-                try {
-                    const response = await fetch(`/api/participants/${encodeURIComponent(token)}?token=${organizerToken}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        const error = await response.json();
-                        alert('Error deleting participant: ' + error.message);
-                    }
-                } catch (error) {
-                    alert('Error deleting participant: ' + error.message);
-                }
+        function deleteParticipant(token, name) {
+            // Store participant details for deletion
+            window.pendingDelete = { token, name };
+            
+            // Show custom confirmation popup
+            document.getElementById('deleteMessage').innerHTML = 
+                `This will permanently delete participant "<strong>${name}</strong>" (${token}) and all their submissions.<br><br>Type <strong>"DELETE ${name}"</strong> to confirm:`;
+            document.getElementById('deleteConfirmInput').placeholder = `Type "DELETE ${name}" to confirm`;
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('deletePopup').style.display = 'flex';
+            document.getElementById('deleteConfirmInput').focus();
+        }
+
+        function hideDeletePopup() {
+            document.getElementById('deletePopup').style.display = 'none';
+        }
+
+        async function confirmDelete() {
+            const input = document.getElementById('deleteConfirmInput').value;
+            const expectedInput = `DELETE ${window.pendingDelete.name}`;
+            
+            if (input !== expectedInput) {
+                showResult('error', '❌ Invalid Confirmation', `Please type "${expectedInput}" exactly as shown.`);
+                return;
             }
+            
+            hideDeletePopup();
+            
+            try {
+                const response = await fetch(`/api/participants/${encodeURIComponent(window.pendingDelete.token)}?token=${organizerToken}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResult('success', '✅ Participant Deleted', `Participant "${window.pendingDelete.name}" has been deleted successfully.`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting participant: ' + error.message);
+                }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting participant: ' + error.message);
+            }
+        }
+
+        function showResult(type, title, message) {
+            const resultBox = document.getElementById('resultBox');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            resultTitle.textContent = title;
+            resultMessage.innerHTML = message;
+            
+            if (type === 'success') {
+                resultBox.classList.add('success');
+            } else {
+                resultBox.classList.remove('success');
+            }
+            
+            document.getElementById('resultPopup').style.display = 'flex';
+        }
+
+        function hideResultPopup() {
+            document.getElementById('resultPopup').style.display = 'none';
         }
 
         document.getElementById('participantFormElement').addEventListener('submit', async function(e) {
@@ -222,13 +309,14 @@
                 }
 
                 if (response.ok) {
-                    location.reload();
+                    showResult('success', '✅ Success', isEditing ? 'Participant updated successfully' : 'Participant created successfully');
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     const error = await response.json();
-                    alert('Error: ' + error.message);
+                    showResult('error', '❌ Error', 'Error: ' + error.message);
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                showResult('error', '❌ Network Error', 'Error: ' + error.message);
             }
         });
 
@@ -237,6 +325,21 @@
         
         // Update times every 30 seconds
         setInterval(updateRelativeTimes, 30000);
+
+        // Close popups when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('popup-overlay')) {
+                hideDeletePopup();
+                hideResultPopup();
+            }
+        });
+
+        // Handle Enter key in confirmation input
+        document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                confirmDelete();
+            }
+        });
     </script>
 </body>
 </html>
