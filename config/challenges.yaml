@@ -1,0 +1,11 @@
+challenges:
+- name: "Challenge 1"
+  description": "Find the hidden flag"
+  flag": "CTF{did_you_ckecked_the_logs}"
+  points": 100
+  hint": "did you wait enough"
+- name: "Challenge 2"
+  description": "Find the hidden flag"
+  flag": "CTF{my_favorite_card}"
+  points": 150
+  hint": "Check the config"
