@@ -52,12 +52,12 @@ async function requireOrganizerAuth(req, res, next) {
 // Routes
 
 // Participant login page
-app.get('/participant', (req, res) => {
+app.get('/p', (req, res) => {
   const token = req.query.token;
   
   if (token) {
     // If token provided, redirect to participant page
-    return res.redirect(`/participant/${token}`);
+    return res.redirect(`/p/${token}`);
   }
   
   // Show login form
@@ -65,7 +65,7 @@ app.get('/participant', (req, res) => {
 });
 
 // Participant page
-app.get('/participant/:token', async (req, res) => {
+app.get('/p/:token', async (req, res) => {
   const token = req.params.token;
   
   try {
@@ -86,6 +86,19 @@ app.get('/participant/:token', async (req, res) => {
     console.error('Participant dashboard error:', error);
     res.status(500).send('Database error');
   }
+});
+
+// Backward compatibility redirects
+app.get('/participant', (req, res) => {
+  const token = req.query.token;
+  if (token) {
+    return res.redirect(`/p/${token}`);
+  }
+  return res.redirect('/p');
+});
+
+app.get('/participant/:token', (req, res) => {
+  return res.redirect(`/p/${req.params.token}`);
 });
 
 // Organizer dashboard (now protected)

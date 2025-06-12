@@ -57,7 +57,6 @@
             </div>
             <div style="text-align: center;">
                 <h2>Welcome, <%= participant.name %></h2>
-                <p>Token: <%= token %></p>
             </div>
         </div>
 
@@ -148,7 +147,7 @@
         }
 
         function logout() {
-            window.location.href = '/participant';
+            window.location.href = '/p';
         }
 
         async function showHint(challengeId, challengeName, hint) {
