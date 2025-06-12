@@ -1,71 +1,107 @@
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 
-// Database instance
-let db;
+// Database connection pool
+let pool;
 
-// Initialize database
-function initDatabase() {
-  db = new sqlite3.Database('./ctf.db');
+// Initialize database connection
+async function initDatabase() {
+  const databaseUrl = process.env.DATABASE_URL;
   
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      // Participants table
-      db.run(`CREATE TABLE IF NOT EXISTS participants (
-        token TEXT PRIMARY KEY,
-        name TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
 
-      // Challenges table
-      db.run(`CREATE TABLE IF NOT EXISTS challenges (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        description TEXT,
-        flag TEXT NOT NULL UNIQUE,
-        points INTEGER DEFAULT 100,
-        hint TEXT DEFAULT '',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
-
-      // Add hint column if it doesn't exist (for existing databases)
-      db.run(`ALTER TABLE challenges ADD COLUMN hint TEXT DEFAULT ''`, (err) => {
-        // Ignore error if column already exists
-      });
-
-      // Add unique constraint on flag for existing databases
-      db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_challenges_flag_unique ON challenges(flag)`, (err) => {
-        // Ignore error if index already exists
-      });
-
-      // Submissions table
-      db.run(`CREATE TABLE IF NOT EXISTS submissions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        participant_token TEXT,
-        challenge_id INTEGER,
-        submitted_flag TEXT,
-        is_correct BOOLEAN,
-        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (participant_token) REFERENCES participants (token),
-        FOREIGN KEY (challenge_id) REFERENCES challenges (id)
-      )`);
-
-      // Create organizers table
-      db.run(`CREATE TABLE IF NOT EXISTS organizers (
-        token TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
-
-      // Load and insert initial data from JSON files only
-      seedInitialData().then(() => {
-        resolve();
-      }).catch((err) => {
-        reject(err);
-      });
+  try {
+    console.log('🐘 Connecting to PostgreSQL database...');
+    
+    pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     });
-  });
+
+    // Test the connection
+    const client = await pool.connect();
+    console.log('✅ Connected to PostgreSQL database');
+    client.release();
+
+    // Create tables
+    await createTables();
+    
+    // Load initial data
+    await seedInitialData();
+    
+    console.log('✅ Database initialization completed');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error.message);
+    throw error;
+  }
+}
+
+// Create database tables
+async function createTables() {
+  const schema = `
+    -- Participants table
+    CREATE TABLE IF NOT EXISTS participants (
+      token VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Challenges table
+    CREATE TABLE IF NOT EXISTS challenges (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      flag VARCHAR(255) NOT NULL UNIQUE,
+      points INTEGER DEFAULT 100,
+      hint TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Submissions table
+    CREATE TABLE IF NOT EXISTS submissions (
+      id SERIAL PRIMARY KEY,
+      participant_token VARCHAR(255),
+      challenge_id INTEGER,
+      submitted_flag VARCHAR(255),
+      is_correct BOOLEAN,
+      submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (participant_token) REFERENCES participants (token),
+      FOREIGN KEY (challenge_id) REFERENCES challenges (id)
+    );
+
+    -- Organizers table
+    CREATE TABLE IF NOT EXISTS organizers (
+      token VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Create indexes for better performance
+    CREATE INDEX IF NOT EXISTS idx_submissions_participant ON submissions(participant_token);
+    CREATE INDEX IF NOT EXISTS idx_submissions_challenge ON submissions(challenge_id);
+    CREATE INDEX IF NOT EXISTS idx_submissions_correct ON submissions(is_correct);
+    CREATE INDEX IF NOT EXISTS idx_challenges_flag ON challenges(flag);
+  `;
+
+  const statements = schema.split(';').filter(stmt => stmt.trim());
+  
+  for (const statement of statements) {
+    if (statement.trim()) {
+      try {
+        await pool.query(statement.trim());
+      } catch (err) {
+        // Ignore errors for objects that already exist
+        if (!err.message.includes('already exists') && !err.message.includes('relation')) {
+          console.warn('⚠️  Schema warning:', err.message);
+        }
+      }
+    }
+  }
+  
+  console.log('✅ Applied PostgreSQL schema');
 }
 
 // Load initial data from JSON files
@@ -78,16 +114,10 @@ async function seedInitialData() {
       path.join(configDir, 'challenges.json'),
       'challenges',
       async (challenge) => {
-        await new Promise((resolve, reject) => {
-          db.run(
-            'INSERT OR IGNORE INTO challenges (name, description, flag, points, hint) VALUES (?, ?, ?, ?, ?)',
-            [challenge.name, challenge.description, challenge.flag, challenge.points, challenge.hint || ''],
-            function(err) {
-              if (err) reject(err);
-              else resolve();
-            }
-          );
-        });
+        await pool.query(
+          'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (flag) DO NOTHING',
+          [challenge.name, challenge.description, challenge.flag, challenge.points, challenge.hint || '']
+        );
       }
     );
     
@@ -96,16 +126,10 @@ async function seedInitialData() {
       path.join(configDir, 'participants.json'),
       'participants',
       async (participant) => {
-        await new Promise((resolve, reject) => {
-          db.run(
-            'INSERT OR IGNORE INTO participants (token, name) VALUES (?, ?)',
-            [participant.token, participant.name],
-            function(err) {
-              if (err) reject(err);
-              else resolve();
-            }
-          );
-        });
+        await pool.query(
+          'INSERT INTO participants (token, name) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING',
+          [participant.token, participant.name]
+        );
       }
     );
     
@@ -114,16 +138,10 @@ async function seedInitialData() {
       path.join(configDir, 'organizers.json'),
       'organizers',
       async (organizer) => {
-        await new Promise((resolve, reject) => {
-          db.run(
-            'INSERT OR IGNORE INTO organizers (token, name) VALUES (?, ?)',
-            [organizer.token, organizer.name],
-            function(err) {
-              if (err) reject(err);
-              else resolve();
-            }
-          );
-        });
+        await pool.query(
+          'INSERT INTO organizers (token, name) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING',
+          [organizer.token, organizer.name]
+        );
       }
     );
     
@@ -162,9 +180,9 @@ async function loadDataFromFile(filePath, dataType, insertFunction) {
   }
 }
 
-// Get database instance
+// Get database pool
 function getDatabase() {
-  return db;
+  return pool;
 }
 
 module.exports = {

@@ -1,106 +1,67 @@
 const { getDatabase } = require('./index');
 
 // Get all challenges
-function getAllChallenges() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.all('SELECT * FROM challenges ORDER BY id', (err, challenges) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(challenges);
-      }
-    });
-  });
+async function getAllChallenges() {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT * FROM challenges ORDER BY id');
+  return result.rows;
 }
 
 // Get challenges with participant's solution status
-function getChallengesWithSolutions(participantToken) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.all(`SELECT c.*, 
-              CASE WHEN s.is_correct = 1 THEN 1 ELSE 0 END as solved
-            FROM challenges c
-            LEFT JOIN (
-              SELECT challenge_id, MAX(is_correct) as is_correct
-              FROM submissions 
-              WHERE participant_token = ? 
-              GROUP BY challenge_id
-            ) s ON c.id = s.challenge_id
-            ORDER BY c.id`, [participantToken], (err, challenges) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(challenges);
-      }
-    });
-  });
+async function getChallengesWithSolutions(participantToken) {
+  const pool = getDatabase();
+  const result = await pool.query(`
+    SELECT c.*, 
+           CASE WHEN s.is_correct = 1 THEN true ELSE false END as solved
+    FROM challenges c
+    LEFT JOIN (
+      SELECT challenge_id, MAX(CASE WHEN is_correct = true THEN 1 ELSE 0 END) as is_correct
+      FROM submissions 
+      WHERE participant_token = $1 
+      GROUP BY challenge_id
+    ) s ON c.id = s.challenge_id
+    ORDER BY c.id
+  `, [participantToken]);
+  return result.rows;
 }
 
 // Get challenge by ID
-function getChallengeById(challengeId) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.get('SELECT * FROM challenges WHERE id = ?', [challengeId], (err, challenge) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(challenge);
-      }
-    });
-  });
+async function getChallengeById(challengeId) {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT * FROM challenges WHERE id = $1', [challengeId]);
+  return result.rows[0] || null;
 }
 
 // Create a new challenge
-function createChallenge(name, description, flag, points = 100, hint = '') {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.run('INSERT INTO challenges (name, description, flag, points, hint) VALUES (?, ?, ?, ?, ?)',
-      [name, description, flag, points, hint], function(err) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ id: this.lastID, name, description, flag, points, hint });
-      }
-    });
-  });
+async function createChallenge(name, description, flag, points = 100, hint = '') {
+  const pool = getDatabase();
+  const result = await pool.query(
+    'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [name, description, flag, points, hint]
+  );
+  return result.rows[0];
 }
 
 // Update an existing challenge
-function updateChallenge(id, name, description, flag, points, hint = '') {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.run('UPDATE challenges SET name = ?, description = ?, flag = ?, points = ?, hint = ? WHERE id = ?',
-      [name, description, flag, points, hint, id], function(err) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ id, name, description, flag, points, hint, changes: this.changes });
-      }
-    });
-  });
+async function updateChallenge(id, name, description, flag, points, hint = '') {
+  const pool = getDatabase();
+  const result = await pool.query(
+    'UPDATE challenges SET name = $1, description = $2, flag = $3, points = $4, hint = $5 WHERE id = $6 RETURNING *',
+    [name, description, flag, points, hint, id]
+  );
+  return { ...result.rows[0], changes: result.rowCount };
 }
 
 // Delete a challenge
-function deleteChallenge(id) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    // First delete related submissions
-    db.run('DELETE FROM submissions WHERE challenge_id = ?', [id], (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        // Then delete the challenge
-        db.run('DELETE FROM challenges WHERE id = ?', [id], function(err) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ id, changes: this.changes });
-          }
-        });
-      }
-    });
-  });
+async function deleteChallenge(id) {
+  const pool = getDatabase();
+  
+  // First delete related submissions
+  await pool.query('DELETE FROM submissions WHERE challenge_id = $1', [id]);
+  
+  // Then delete the challenge
+  const result = await pool.query('DELETE FROM challenges WHERE id = $1', [id]);
+  return { id, changes: result.rowCount };
 }
 
 module.exports = {

@@ -1,31 +1,17 @@
 const { getDatabase } = require('./index');
 
 // Get organizer by token
-function getOrganizerByToken(token) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.get('SELECT * FROM organizers WHERE token = ?', [token], (err, organizer) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(organizer);
-      }
-    });
-  });
+async function getOrganizerByToken(token) {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT * FROM organizers WHERE token = $1', [token]);
+  return result.rows[0] || null;
 }
 
-// Validate organizer token (for API endpoint)
-function validateOrganizerToken(token) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.get('SELECT token, name FROM organizers WHERE token = ?', [token], (err, organizer) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(organizer);
-      }
-    });
-  });
+// Validate organizer token
+async function validateOrganizerToken(token) {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT token, name FROM organizers WHERE token = $1', [token]);
+  return result.rows[0] || null;
 }
 
 module.exports = {

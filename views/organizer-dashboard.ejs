@@ -96,7 +96,7 @@
                 <div>Challenges</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number"><%= participants.reduce((sum, p) => sum + (p.solved_challenges || 0), 0) %></div>
+                <div class="stat-number"><%= participants.reduce((sum, p) => sum + (parseInt(p.solved_challenges) || 0), 0) %></div>
                 <div>Total Solves</div>
             </div>
         </div>
@@ -123,7 +123,7 @@
                                   <strong><%= participant.name %></strong><br>
                                 </td>
                                 <td><strong><%= participant.total_points || 0 %></strong></td>
-                                <td><%= participant.solved_challenges || 0 %>/<%= challenges.length %></td>
+                                <td><%= parseInt(participant.solved_challenges) || 0 %>/<%= challenges.length %></td>
                                 <td><%= participant.last_submission ? '' : 'Never' %><% if (participant.last_submission) { %><span class="relative-time" data-timestamp="<%= participant.last_submission %>"></span><% } %></td>
                               </tr>
                             <% }); %>

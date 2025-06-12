@@ -101,7 +101,7 @@
                         <td><strong><%= participant.name %></strong></td>
                         <td><%= participant.total_points || 0 %></td>
                         <td><%= participant.solved_challenges || 0 %></td>
-                        <td><%= participant.last_submission ? new Date(participant.last_submission).toLocaleString() : 'Never' %></td>
+                        <td><%= participant.last_submission ? '' : 'Never' %><% if (participant.last_submission) { %><span class="relative-time" data-timestamp="<%= participant.last_submission %>"></span><% } %></td>
                         <td><%= new Date(participant.created_at).toLocaleDateString() %></td>
                         <td>
                             <button class="action-btn edit-btn" onclick="editParticipant('<%= participant.token %>', '<%= participant.name.replace(/'/g, "\\'") %>')">Edit</button>
@@ -117,6 +117,36 @@
     <script>
         let isEditing = false;
         const organizerToken = '<%= token %>';
+
+        function getRelativeTime(timestamp) {
+            const now = new Date();
+            // PostgreSQL CURRENT_TIMESTAMP returns UTC, so treat the timestamp as UTC
+            const past = new Date(timestamp + 'Z');
+            const diffInSeconds = Math.floor((now - past) / 1000);
+            
+            if (diffInSeconds < 60) {
+                return diffInSeconds + ' secs';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return minutes + ' mins';
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return hours + ' hrs';
+            } else if (diffInSeconds < 2592000) {
+                const days = Math.floor(diffInSeconds / 86400);
+                return days + ' days';
+            } else {
+                const months = Math.floor(diffInSeconds / 2592000);
+                return months + ' months';
+            }
+        }
+        
+        function updateRelativeTimes() {
+            document.querySelectorAll('.relative-time').forEach(function(element) {
+                const timestamp = element.getAttribute('data-timestamp');
+                element.textContent = getRelativeTime(timestamp);
+            });
+        }
 
         function showCreateForm() {
             document.getElementById('participantForm').classList.remove('hidden');
@@ -201,6 +231,12 @@
                 alert('Error: ' + error.message);
             }
         });
+
+        // Update times on page load
+        updateRelativeTimes();
+        
+        // Update times every 30 seconds
+        setInterval(updateRelativeTimes, 30000);
     </script>
 </body>
 </html>

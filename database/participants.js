@@ -1,135 +1,90 @@
 const { getDatabase } = require('./index');
 
 // Get participant by token
-function getParticipantByToken(token) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.get('SELECT * FROM participants WHERE token = ?', [token], (err, participant) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(participant);
-      }
-    });
-  });
+async function getParticipantByToken(token) {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT * FROM participants WHERE token = $1', [token]);
+  return result.rows[0] || null;
 }
 
 // Get all participants with their progress
-function getParticipantsWithProgress() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.all(`SELECT 
-              p.token,
-              p.name,
-              p.created_at,
-              COUNT(CASE WHEN s.is_correct = 1 THEN 1 END) as solved_challenges,
-              SUM(CASE WHEN s.is_correct = 1 THEN c.points ELSE 0 END) as total_points,
-              MAX(s.submitted_at) as last_submission
-            FROM participants p
-            LEFT JOIN submissions s ON p.token = s.participant_token
-            LEFT JOIN challenges c ON s.challenge_id = c.id
-            GROUP BY p.token, p.name, p.created_at
-            ORDER BY total_points DESC, last_submission ASC`, (err, participants) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(participants);
-      }
-    });
-  });
+async function getParticipantsWithProgress() {
+  const pool = getDatabase();
+  const result = await pool.query(`
+    SELECT 
+      p.token,
+      p.name,
+      p.created_at,
+      COUNT(CASE WHEN s.is_correct = true THEN 1 END) as solved_challenges,
+      SUM(CASE WHEN s.is_correct = true THEN c.points ELSE 0 END) as total_points,
+      MAX(s.submitted_at) as last_submission
+    FROM participants p
+    LEFT JOIN submissions s ON p.token = s.participant_token
+    LEFT JOIN challenges c ON s.challenge_id = c.id
+    GROUP BY p.token, p.name, p.created_at
+    ORDER BY total_points DESC, last_submission ASC
+  `);
+  return result.rows;
 }
 
 // Get participant progress matrix
-function getParticipantProgress() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.all(`SELECT 
-              p.token,
-              c.id as challenge_id,
-              MAX(s.is_correct) as solved
-            FROM participants p
-            CROSS JOIN challenges c
-            LEFT JOIN submissions s ON p.token = s.participant_token AND c.id = s.challenge_id
-            GROUP BY p.token, c.id`, (err, progress) => {
-      if (err) {
-        reject(err);
-      } else {
-        // Build progress matrix
-        const progressMatrix = {};
-        progress.forEach(p => {
-          if (!progressMatrix[p.token]) progressMatrix[p.token] = {};
-          progressMatrix[p.token][p.challenge_id] = p.solved === 1;
-        });
-        resolve(progressMatrix);
-      }
-    });
+async function getParticipantProgress() {
+  const pool = getDatabase();
+  const result = await pool.query(`
+    SELECT 
+      p.token,
+      c.id as challenge_id,
+      MAX(CASE WHEN s.is_correct = true THEN 1 ELSE 0 END) as solved
+    FROM participants p
+    CROSS JOIN challenges c
+    LEFT JOIN submissions s ON p.token = s.participant_token AND c.id = s.challenge_id
+    GROUP BY p.token, c.id
+  `);
+  
+  // Build progress matrix
+  const progressMatrix = {};
+  result.rows.forEach(p => {
+    if (!progressMatrix[p.token]) progressMatrix[p.token] = {};
+    progressMatrix[p.token][p.challenge_id] = p.solved === 1;
   });
+  
+  return progressMatrix;
 }
 
 // Get all participants
-function getAllParticipants() {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.all('SELECT * FROM participants ORDER BY created_at DESC', (err, participants) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(participants);
-      }
-    });
-  });
+async function getAllParticipants() {
+  const pool = getDatabase();
+  const result = await pool.query('SELECT * FROM participants ORDER BY created_at DESC');
+  return result.rows;
 }
 
 // Create a new participant
-function createParticipant(token, name) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.run('INSERT INTO participants (token, name) VALUES (?, ?)',
-      [token, name], function(err) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ token, name });
-      }
-    });
-  });
+async function createParticipant(token, name) {
+  const pool = getDatabase();
+  await pool.query('INSERT INTO participants (token, name) VALUES ($1, $2)', [token, name]);
+  return { token, name };
 }
 
 // Update an existing participant
-function updateParticipant(token, name) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    db.run('UPDATE participants SET name = ? WHERE token = ?',
-      [name, token], function(err) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ token, name, changes: this.changes });
-      }
-    });
-  });
+async function updateParticipant(token, name) {
+  const pool = getDatabase();
+  const result = await pool.query(
+    'UPDATE participants SET name = $1 WHERE token = $2',
+    [name, token]
+  );
+  return { token, name, changes: result.rowCount };
 }
 
 // Delete a participant
-function deleteParticipant(token) {
-  return new Promise((resolve, reject) => {
-    const db = getDatabase();
-    // First delete related submissions
-    db.run('DELETE FROM submissions WHERE participant_token = ?', [token], (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        // Then delete the participant
-        db.run('DELETE FROM participants WHERE token = ?', [token], function(err) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ token, changes: this.changes });
-          }
-        });
-      }
-    });
-  });
+async function deleteParticipant(token) {
+  const pool = getDatabase();
+  
+  // First delete related submissions
+  await pool.query('DELETE FROM submissions WHERE participant_token = $1', [token]);
+  
+  // Then delete the participant
+  const result = await pool.query('DELETE FROM participants WHERE token = $1', [token]);
+  return { token, changes: result.rowCount };
 }
 
 module.exports = {

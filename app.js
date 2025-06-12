@@ -9,7 +9,7 @@ const { getExistingSolve, createSubmission, getAllSubmissions, getSubmissionById
 const { getOrganizerByToken, validateOrganizerToken } = require('./database/organizers');
 
 const app = express();
-const PORT = process.env.PORT || 8890;
+const PORT = process.env.PORT || 3000;
 
 
 // Set EJS as template engine
@@ -82,6 +82,7 @@ app.get('/participant/:token', async (req, res) => {
       challenges: challenges
     });
   } catch (error) {
+    console.error('Participant dashboard error:', error);
     res.status(500).send('Database error');
   }
 });
@@ -192,6 +193,7 @@ app.post('/api/submit', async (req, res) => {
       message: isCorrect ? 'Correct flag!' : 'Incorrect flag'
     });
   } catch (error) {
+    console.error('Flag submission error:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -287,7 +289,7 @@ app.post('/api/participants', requireOrganizerAuth, async (req, res) => {
     const participant = await createParticipant(token, name);
     res.json({ success: true, participant });
   } catch (error) {
-    if (error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+    if (error.code === '23505') { // PostgreSQL unique constraint violation
       res.status(400).json({ error: 'Participant token already exists' });
     } else {
       res.status(500).json({ error: 'Database error', message: error.message });
