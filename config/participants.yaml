@@ -1,0 +1,11 @@
+participants:
+  - token: "TEAM-ALPHA"
+    name: "Team Alpha"
+  - token: "TEAM-BETA"
+    name: "Team Beta"
+  - token: "TEAM-GAMMA"
+    name: "Team Gamma"
+  - token: "SOLO-001"
+    name: "John Doe"
+  - token: "SOLO-002"
+    name: "Jane Smith"

@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
+const YamlConfig = require('../utils/yaml-config');
 
 // Database connection pool
 let pool;
@@ -121,46 +122,74 @@ async function createTables() {
   console.log('✅ Applied PostgreSQL schema');
 }
 
-// Load initial data from JSON files
+// Load initial data from YAML files
 async function seedInitialData() {
-  const configDir = process.env.CONFIG_DIR || path.join(__dirname, '../config');
-  
   try {
     // Load challenges
-    await loadDataFromFile(
-      path.join(configDir, 'challenges.json'),
-      'challenges',
-      async (challenge) => {
+    const challenges = YamlConfig.loadChallenges();
+    if (challenges.length > 0) {
+      // Validate challenges
+      const challengeErrors = YamlConfig.validateChallenges(challenges);
+      if (challengeErrors.length > 0) {
+        console.error('❌ Challenge validation errors:');
+        challengeErrors.forEach(error => console.error(`  - ${error}`));
+        throw new Error('Challenge configuration validation failed');
+      }
+      
+      for (const challenge of challenges) {
         await pool.query(
           'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (flag) DO NOTHING',
           [challenge.name, challenge.description, challenge.flag, challenge.points, challenge.hint || '']
         );
       }
-    );
+      console.log(`✅ Seeded ${challenges.length} challenges`);
+    } else {
+      console.log('ℹ️  No challenges configuration found, skipping challenges seed data');
+    }
     
     // Load participants
-    await loadDataFromFile(
-      path.join(configDir, 'participants.json'),
-      'participants',
-      async (participant) => {
+    const participants = YamlConfig.loadParticipants();
+    if (participants.length > 0) {
+      // Validate participants
+      const participantErrors = YamlConfig.validateParticipants(participants);
+      if (participantErrors.length > 0) {
+        console.error('❌ Participant validation errors:');
+        participantErrors.forEach(error => console.error(`  - ${error}`));
+        throw new Error('Participant configuration validation failed');
+      }
+      
+      for (const participant of participants) {
         await pool.query(
           'INSERT INTO participants (token, name) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING',
           [participant.token, participant.name]
         );
       }
-    );
+      console.log(`✅ Seeded ${participants.length} participants`);
+    } else {
+      console.log('ℹ️  No participants configuration found, skipping participants seed data');
+    }
     
     // Load organizers
-    await loadDataFromFile(
-      path.join(configDir, 'organizers.json'),
-      'organizers',
-      async (organizer) => {
+    const organizers = YamlConfig.loadOrganizers();
+    if (organizers.length > 0) {
+      // Validate organizers
+      const organizerErrors = YamlConfig.validateOrganizers(organizers);
+      if (organizerErrors.length > 0) {
+        console.error('❌ Organizer validation errors:');
+        organizerErrors.forEach(error => console.error(`  - ${error}`));
+        throw new Error('Organizer configuration validation failed');
+      }
+      
+      for (const organizer of organizers) {
         await pool.query(
           'INSERT INTO organizers (token, name) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING',
           [organizer.token, organizer.name]
         );
       }
-    );
+      console.log(`✅ Seeded ${organizers.length} organizers`);
+    } else {
+      console.log('ℹ️  No organizers configuration found, skipping organizers seed data');
+    }
     
   } catch (error) {
     console.error('❌ Error loading initial data:', error.message);
@@ -168,34 +197,6 @@ async function seedInitialData() {
   }
 }
 
-// Helper function to load data from a specific file
-async function loadDataFromFile(filePath, dataType, insertFunction) {
-  try {
-    if (!fs.existsSync(filePath)) {
-      console.log(`ℹ️  No ${dataType}.json file found, skipping ${dataType} seed data`);
-      return;
-    }
-    
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    
-    if (!Array.isArray(data)) {
-      console.log(`⚠️  ${dataType}.json should contain an array, skipping`);
-      return;
-    }
-    
-    for (const item of data) {
-      await insertFunction(item);
-    }
-    
-    if (data.length > 0) {
-      console.log(`✅ Seeded ${data.length} ${dataType}`);
-    }
-    
-  } catch (error) {
-    console.error(`❌ Error loading ${dataType} from ${filePath}:`, error.message);
-    // Don't throw here, continue with other files
-  }
-}
 
 // Get database pool
 function getDatabase() {

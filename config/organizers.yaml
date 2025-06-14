@@ -1,0 +1,5 @@
+organizers:
+  - token: "ADMIN-MAIN"
+    name: "Main Administrator"
+  - token: "ADMIN-ASST"
+    name: "Assistant Administrator"

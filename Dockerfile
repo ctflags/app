@@ -12,6 +12,8 @@ RUN npm ci --only=production
 COPY app.js .
 COPY views/ ./views/
 COPY database/ ./database/
+COPY utils/ ./utils/
+COPY config/ ./config/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
