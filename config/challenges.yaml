@@ -19,3 +19,8 @@ challenges:
     flag: "CTF{crypto_is_fun}"
     points: 250
     hint: "Base64 encoding might be involved"
+  - name: "Challenge 5"
+    description: "Cryptography challenge 2"
+    flag: "CTF{crypto_is_fun}"
+    points: 250
+    hint: "Base64 encoding might be involved"

@@ -54,9 +54,9 @@ async function createTables() {
     -- Challenges table
     CREATE TABLE IF NOT EXISTS challenges (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(255) NOT NULL,
+      name VARCHAR(255) NOT NULL UNIQUE,
       description TEXT,
-      flag VARCHAR(255) NOT NULL UNIQUE,
+      flag VARCHAR(255) NOT NULL,
       points INTEGER DEFAULT 100,
       hint TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -99,6 +99,7 @@ async function createTables() {
     CREATE INDEX IF NOT EXISTS idx_submissions_participant ON submissions(participant_id);
     CREATE INDEX IF NOT EXISTS idx_submissions_challenge ON submissions(challenge_id);
     CREATE INDEX IF NOT EXISTS idx_submissions_correct ON submissions(is_correct);
+    CREATE INDEX IF NOT EXISTS idx_challenges_name ON challenges(name);
     CREATE INDEX IF NOT EXISTS idx_challenges_flag ON challenges(flag);
     CREATE INDEX IF NOT EXISTS idx_hint_views_participant ON hint_views(participant_id);
     CREATE INDEX IF NOT EXISTS idx_hint_views_challenge ON hint_views(challenge_id);
@@ -138,7 +139,7 @@ async function seedInitialData() {
       
       for (const challenge of challenges) {
         await pool.query(
-          'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (flag) DO NOTHING',
+          'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, flag = EXCLUDED.flag, points = EXCLUDED.points, hint = EXCLUDED.hint',
           [challenge.name, challenge.description, challenge.flag, challenge.points, challenge.hint || '']
         );
       }
