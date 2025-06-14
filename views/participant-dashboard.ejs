@@ -16,6 +16,7 @@
         .submit-btn:hover { background: #00cc00; }
         .submit-btn:disabled { background: #666; cursor: not-allowed; }
         .solved-badge { background: #ff6b35; color: #fff; padding: 5px 10px; border-radius: 20px; font-size: 12px; margin-left: 10px; }
+        .solved-badge.hint-used { background: #e67e22; border: 1px solid #d35400; }
         .points { color: #00ff00; font-weight: bold; }
         .challenge-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .challenge-title { margin: 0; color: #00ff00; }
@@ -69,7 +70,11 @@
                 <%= challenge.name %> 
                 <span class="points">(<%= challenge.points %> pts)</span>
                 <% if (challenge.solved) { %>
-                  <span class="solved-badge">SOLVED</span>
+                  <% if (challenge.hint_viewed) { %>
+                    <span class="solved-badge hint-used">SOLVED (with hint)</span>
+                  <% } else { %>
+                    <span class="solved-badge">SOLVED</span>
+                  <% } %>
                 <% } %>
               </h3>
               <% if (challenge.hint && challenge.hint.trim() && !challenge.solved) { %>
