@@ -35,11 +35,27 @@
             font-size: 1.1em;
             line-height: 1.5;
         }
-        .access-buttons { 
+        .login-form { 
             display: flex;
             flex-direction: column;
             gap: 15px;
             margin-top: 30px;
+        }
+        .token-input {
+            width: 100%;
+            padding: 15px;
+            background: #333;
+            border: 2px solid #555;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        .token-input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
         }
         .access-btn { 
             display: block;
@@ -59,15 +75,6 @@
             background: #00cc00; 
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 255, 0, 0.3);
-        }
-        .organizer-btn { 
-            background: #ff6b35; 
-            color: #fff; 
-        }
-        .organizer-btn:hover { 
-            background: #e55a2b; 
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
         }
         .subtitle {
             color: #888;
@@ -101,30 +108,16 @@
             <h1 class="platform-title">🚩 CTF Platform</h1>
             <p class="welcome-text">
                 Welcome to the Capture The Flag platform!<br>
-                Choose your access level to get started.
+                Enter your participant token to get started.
             </p>
             
-            <div class="access-buttons">
-                <a href="/p" class="access-btn participant-btn">
-                    <div class="btn-group">
-                        <span class="btn-icon">🎯</span>
-                        <div>
-                            <div>Participant Access</div>
-                            <div class="subtitle">Join the competition</div>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="/organizer" class="access-btn organizer-btn">
-                    <div class="btn-group">
-                        <span class="btn-icon">👑</span>
-                        <div>
-                            <div>Organizer Dashboard</div>
-                            <div class="subtitle">Manage the competition</div>
-                        </div>
-                    </div>
-                </a>
-            </div>
+            <form method="GET" action="/p" class="login-form">
+                <input type="text" name="token" class="token-input" placeholder="Enter your participant token" required>
+                <button type="submit" class="access-btn participant-btn">
+                    <span class="btn-icon">🎯</span>
+                    Access Challenges
+                </button>
+            </form>
         </div>
     </div>
 </body>

@@ -1,26 +1,21 @@
 challenges:
   - name: "Challenge 1"
-    description: "Find the hidden flag"
-    flag: "CTF{did_you_checked_the_logs}"
-    points: 100
-    hint: "did you wait enough"
+    description: ""
+    flag: "this_is_wrong"
+    points: 50
+    hint: "Did you wait enough ?"
   - name: "Challenge 2"
-    description: "Find the hidden flag"
-    flag: "CTF{my_favorite_card}"
-    points: 150
-    hint: "Check the config"
+    description: ""
+    flag: "this_is_not_secret"
+    points: 50
+    hint: "Is the config right ?"
   - name: "Challenge 3"
-    description: "Reverse engineering challenge"
-    flag: "CTF{reverse_me_if_you_can}"
-    points: 200
-    hint: "Use a disassembler"
+    description: ""
+    flag: "this_is_a_funky_beast"
+    points: 100
+    hint: "These things are secret"
   - name: "Challenge 4"
-    description: "Cryptography challenge"
-    flag: "CTF{crypto_is_fun}"
-    points: 250
-    hint: "Base64 encoding might be involved"
-  - name: "Challenge 5"
-    description: "Cryptography challenge 2"
-    flag: "CTF{crypto_is_fun}"
+    description: ""
+    flag: "you_caught_me"
     points: 250
     hint: "Base64 encoding might be involved"

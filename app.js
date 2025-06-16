@@ -51,7 +51,7 @@ async function requireOrganizerAuth(req, res, next) {
 
 // Routes
 
-// Participant login page
+// Participant token handler
 app.get('/p', (req, res) => {
   const token = req.query.token;
   
@@ -60,8 +60,8 @@ app.get('/p', (req, res) => {
     return res.redirect(`/p/${token}`);
   }
   
-  // Show login form
-  res.render('participant-login');
+  // No token provided, redirect to main page
+  res.redirect('/');
 });
 
 // Participant page
