@@ -1,0 +1,28 @@
+challenges:
+  - name: "Sample Challenge 1"
+    description: "Find the hidden flag in the logs"
+    flag: "CTF{sample_flag_1}"
+    points: 100
+    hint: "Check the application logs carefully"
+  - name: "Sample Challenge 2"
+    description: "Decode the secret message"
+    flag: "CTF{sample_flag_2}"
+    points: 150
+    hint: "Base64 might be involved"
+  - name: "Sample Challenge 3"
+    description: "Reverse engineering challenge"
+    flag: "CTF{sample_flag_3}"
+    points: 200
+    hint: "Use a disassembler tool"
+
+participants:
+  - token: "CTF-P1"
+    name: "Sample Player01"
+  - token: "CTF-p2"
+    name: "Sample Player02"
+  - token: "CTF-p3"
+    name: "Sample Player03"
+
+organizers:
+  - token: "CTF-ADMIN"
+    name: "Sample Administrator"

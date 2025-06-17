@@ -27,10 +27,27 @@ class YamlConfig {
 
   /**
    * Load main configuration file
+   * Priority: 1. CONFIG_FILE env var, 2. config/config.yaml, 3. config/config.sample.yaml
    */
   static loadMainConfig() {
-    const yamlPath = path.join(__dirname, '..', 'config', 'config.yaml');
-    return this.loadConfig(yamlPath);
+    // Try external config file from environment variable
+    if (process.env.CONFIG_FILE) {
+      console.log(`🔧 Using config from environment: ${process.env.CONFIG_FILE}`);
+      const config = this.loadConfig(process.env.CONFIG_FILE);
+      if (config) return config;
+    }
+    
+    // Try local config.yaml
+    const localConfigPath = path.join(__dirname, '..', 'config', 'config.yaml');
+    if (fs.existsSync(localConfigPath)) {
+      console.log(`📄 Using local config: ${localConfigPath}`);
+      return this.loadConfig(localConfigPath);
+    }
+    
+    // Fallback to sample config
+    const sampleConfigPath = path.join(__dirname, '..', 'config', 'config.sample.yaml');
+    console.log(`📄 Using sample config: ${sampleConfigPath}`);
+    return this.loadConfig(sampleConfigPath);
   }
 
   /**
