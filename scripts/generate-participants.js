@@ -37,7 +37,7 @@ function generateParticipants(count = 35) {
     
     participants.push({
       token: token,
-      name: `Player${i}`
+      name: `Player${i.toString().padStart(2, '0')}`
     });
   }
   

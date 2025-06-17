@@ -67,6 +67,26 @@
         .fixed-table thead tr, .scrollable-table thead tr { height: 180px; }
         .fixed-table th, .fixed-table td { height: inherit; }
         .scrollable-table th, .scrollable-table td { height: inherit; }
+        
+        /* Sort button styling */
+        .sort-btn {
+            background: #555;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .sort-btn:hover {
+            background: #666;
+        }
+        .sort-btn.active {
+            background: #ff6b35;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -104,6 +124,13 @@
                 <div class="stat-number"><%= participants.reduce((sum, p) => sum + (parseInt(p.solved_challenges) || 0), 0) %></div>
                 <div>Total Solves</div>
             </div>
+        </div>
+
+        <!-- Sorting Controls -->
+        <div style="background: #2d2d2d; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+            <strong>Sort by:</strong>
+            <button id="sortByPoints" class="sort-btn" onclick="sortTable('points')">🏆 Points</button>
+            <button id="sortByName" class="sort-btn active" onclick="sortTable('name')">📝 Name</button>
         </div>
 
         <!-- Legend -->
@@ -224,8 +251,58 @@
             window.location.href = '/organizer';
         }
         
+        // Sort table function
+        function sortTable(sortBy) {
+            const fixedTbody = document.querySelector('.fixed-table tbody');
+            const scrollableTbody = document.querySelector('.scrollable-table tbody');
+            
+            const fixedRows = Array.from(fixedTbody.querySelectorAll('tr'));
+            const scrollableRows = Array.from(scrollableTbody.querySelectorAll('tr'));
+            
+            // Get participant data for sorting
+            const participantData = fixedRows.map((row, index) => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                const pointsCell = row.querySelector('td:nth-child(3)');
+                return {
+                    name: nameCell.textContent.trim(),
+                    points: parseInt(pointsCell.textContent.trim()) || 0,
+                    fixedRow: fixedRows[index],
+                    scrollableRow: scrollableRows[index],
+                    originalIndex: index
+                };
+            });
+            
+            // Sort the data
+            if (sortBy === 'points') {
+                participantData.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            } else { // sort by name
+                participantData.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            // Update button states
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('sortBy' + (sortBy === 'points' ? 'Points' : 'Name')).classList.add('active');
+            
+            // Clear and rebuild tables
+            fixedTbody.innerHTML = '';
+            scrollableTbody.innerHTML = '';
+            
+            participantData.forEach((participant, newIndex) => {
+                // Update rank in fixed row
+                const rankCell = participant.fixedRow.querySelector('td:first-child');
+                rankCell.textContent = newIndex + 1;
+                
+                // Append to tables
+                fixedTbody.appendChild(participant.fixedRow);
+                scrollableTbody.appendChild(participant.scrollableRow);
+            });
+        }
+        
         // Update times on page load
         updateRelativeTimes();
+        
+        // Sort by name by default
+        sortTable('name');
         
         // Update times every 30 seconds
         setInterval(updateRelativeTimes, 30000);
