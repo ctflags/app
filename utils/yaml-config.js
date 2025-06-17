@@ -26,32 +26,34 @@ class YamlConfig {
   }
 
   /**
-   * Load challenges from YAML
+   * Load main configuration file
+   */
+  static loadMainConfig() {
+    const yamlPath = path.join(__dirname, '..', 'config', 'config.yaml');
+    return this.loadConfig(yamlPath);
+  }
+
+  /**
+   * Load challenges from main config
    */
   static loadChallenges() {
-    const yamlPath = path.join(__dirname, '..', 'config', 'challenges.yaml');
-    
-    const config = this.loadConfig(yamlPath);
+    const config = this.loadMainConfig();
     return config?.challenges || [];
   }
 
   /**
-   * Load participants from YAML
+   * Load participants from main config
    */
   static loadParticipants() {
-    const yamlPath = path.join(__dirname, '..', 'config', 'participants.yaml');
-    
-    const config = this.loadConfig(yamlPath);
+    const config = this.loadMainConfig();
     return config?.participants || [];
   }
 
   /**
-   * Load organizers from YAML
+   * Load organizers from main config
    */
   static loadOrganizers() {
-    const yamlPath = path.join(__dirname, '..', 'config', 'organizers.yaml');
-    
-    const config = this.loadConfig(yamlPath);
+    const config = this.loadMainConfig();
     return config?.organizers || [];
   }
 
