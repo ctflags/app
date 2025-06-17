@@ -176,12 +176,13 @@ class ParticipantService {
         SELECT 
           p.token,
           p.name,
-          COALESCE(SUM(CASE WHEN s.is_correct = true THEN c.points ELSE 0 END), 0) as total_points,
+          COALESCE(SUM(CASE WHEN s.is_correct = true THEN c.points ELSE 0 END) - SUM(CASE WHEN hv.id IS NOT NULL AND s.is_correct = true THEN 10 ELSE 0 END), 0) as total_points,
           COUNT(CASE WHEN s.is_correct = true THEN 1 END) as solved_challenges,
           MAX(s.submitted_at) as last_submission
         FROM participants p
         LEFT JOIN submissions s ON p.id = s.participant_id
         LEFT JOIN challenges c ON s.challenge_id = c.id
+        LEFT JOIN hint_views hv ON p.id = hv.participant_id AND c.id = hv.challenge_id
         GROUP BY p.id, p.token, p.name
         ORDER BY total_points DESC, last_submission ASC
         LIMIT $1

@@ -21,10 +21,6 @@
                 <div class="stat-number"><%= participants.filter(p => p.total_points > 0).length %></div>
                 <div>Active Participants</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-number"><%= Math.round(participants.reduce((sum, p) => sum + (p.total_points || 0), 0) / participants.length) || 0 %></div>
-                <div>Avg Points</div>
-            </div>
         </div>
 
         <!-- Create/Edit Form -->
