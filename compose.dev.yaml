@@ -18,15 +18,31 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "9999:3000"
     environment:
       DATABASE_URL: postgresql://ctf_user:ctf_password@postgres:5432/ctf_db
+      NODE_ENV: development
     depends_on:
       postgres:
         condition: service_healthy
     restart: always
+    volumes:
+    - .:/app
+    - /app/node_modules
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - node_modules/
+            - .git/
+            - .gitignore
+            - Dockerfile*
+        - action: rebuild
+          path: package.json
 
 volumes:
   postgres_data:
