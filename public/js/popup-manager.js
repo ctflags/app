@@ -72,9 +72,11 @@ class PopupManager {
         if (titleElement) titleElement.textContent = title;
         if (messageElement) messageElement.innerHTML = message;
         
-        // Store callbacks
-        window.pendingConfirmAction = confirmCallback;
-        window.pendingCancelAction = cancelCallback;
+        // Store callbacks - ensure they're functions
+        window.pendingConfirmAction = typeof confirmCallback === 'function' ? confirmCallback : null;
+        window.pendingCancelAction = typeof cancelCallback === 'function' ? cancelCallback : null;
+        
+        console.log('Stored confirmation action:', typeof window.pendingConfirmAction);
         
         popup.style.display = 'flex';
     }
@@ -159,9 +161,13 @@ class PopupManager {
      * Execute simple confirmation
      */
     executeConfirmation() {
-        if (window.pendingConfirmAction) {
+        if (window.pendingConfirmAction && typeof window.pendingConfirmAction === 'function') {
+            const action = window.pendingConfirmAction;
             this.hideConfirmation();
-            window.pendingConfirmAction();
+            action();
+        } else {
+            console.error('No valid confirmation action found');
+            this.hideConfirmation();
         }
     }
 

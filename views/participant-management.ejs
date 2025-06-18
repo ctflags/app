@@ -109,26 +109,7 @@
         }
 
         function deleteParticipant(token, name) {
-            window.popupManager.showConfirmation(
-                '⚠️ Delete Participant',
-                `This will permanently delete participant "<strong>${name}</strong>" (${token}) and all their submissions.<br><br>Are you sure you want to continue?`,
-                async () => {
-                    try {
-                        const response = await adminUtils.makeRequest(`/api/participants/${encodeURIComponent(token)}`, {
-                            method: 'DELETE'
-                        });
-                        
-                        if (response.ok) {
-                            showResult('success', '✅ Participant Deleted', `Participant "${name}" has been deleted successfully.`, true);
-                        } else {
-                            const error = await response.json();
-                            showResult('error', '❌ Deletion Failed', 'Error deleting participant: ' + error.message);
-                        }
-                    } catch (error) {
-                        showResult('error', '❌ Network Error', 'Error deleting participant: ' + error.message);
-                    }
-                }
-            );
+            adminUtils.deleteItem('/api/participants', encodeURIComponent(token), name, 'Participant');
         }
 
         // Form submission handler

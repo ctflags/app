@@ -38,7 +38,8 @@ class AdminUtils {
                     });
                     
                     if (response.ok) {
-                        showResult('success', `✅ ${itemType} Deleted`, `${itemType} "${name}" has been deleted successfully.`, true);
+                        // Just reload the page silently - no need for success popup
+                        location.reload();
                     } else {
                         const error = await response.json();
                         showResult('error', '❌ Deletion Failed', error.message);

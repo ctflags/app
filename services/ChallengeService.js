@@ -48,9 +48,9 @@ class ChallengeService {
     try {
       const { name, description, flag, points, hint = '' } = challengeData;
       
-      // Business logic: Validate flag format
-      if (!flag.startsWith('CTF{') || !flag.endsWith('}')) {
-        throw new ConflictError('Flag must be in CTF{...} format');
+      // Business logic: Basic flag validation
+      if (!flag || flag.trim().length === 0) {
+        throw new ConflictError('Flag cannot be empty');
       }
       
       // Business logic: Check for duplicate challenge names
@@ -84,9 +84,9 @@ class ChallengeService {
       
       const { name, description, flag, points, hint = '' } = challengeData;
       
-      // Business logic: Validate flag format
-      if (!flag.startsWith('CTF{') || !flag.endsWith('}')) {
-        throw new ConflictError('Flag must be in CTF{...} format');
+      // Business logic: Basic flag validation
+      if (!flag || flag.trim().length === 0) {
+        throw new ConflictError('Flag cannot be empty');
       }
       
       // Business logic: Check for duplicate challenge names (excluding current)
@@ -119,6 +119,11 @@ class ChallengeService {
       const challenge = await this.getChallengeById(id);
       
       const result = await deleteChallenge(id);
+      
+      if (result.changes === 0) {
+        throw new NotFoundError(ERROR_MESSAGES.CHALLENGE_NOT_FOUND);
+      }
+      
       return {
         deletedChallenge: challenge,
         message: SUCCESS_MESSAGES.CHALLENGE_DELETED
