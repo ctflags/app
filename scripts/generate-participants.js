@@ -56,7 +56,12 @@ function main() {
     process.exit(1);
   }
   
-  console.log(`🎯 Generating ${count} participants...`);
+  // Only show progress messages if output is not being redirected
+  const isOutputRedirected = !process.stdout.isTTY;
+  
+  if (!isOutputRedirected) {
+    console.log(`🎯 Generating ${count} participants...`);
+  }
   
   // Create new config
   let config = {};
@@ -75,7 +80,9 @@ function main() {
     
     console.log(yamlContent);
 
-    console.log(`✅ Generated ${count} participants`);    
+    if (!isOutputRedirected) {
+      console.log(`✅ Generated ${count} participants`);
+    }
   } catch (error) {
     console.error('❌ Error writing file:', error.message);
     process.exit(1);
