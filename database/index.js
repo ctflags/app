@@ -1,6 +1,4 @@
 const { Pool } = require('pg');
-const path = require('path');
-const fs = require('fs');
 const YamlConfig = require('../utils/yaml-config');
 
 // Database connection pool
@@ -17,13 +15,41 @@ async function initDatabase() {
   try {
     console.log('🐘 Connecting to PostgreSQL database...');
     
-    // Configure SSL based on environment and database URL
+    // Disable SSL verification for self-signed certificates
+    if (databaseUrl.includes('sslmode=')) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+      console.log('🔓 Disabled TLS certificate verification for database connection');
+    }
+    
+    // Configure SSL - always allow self-signed certificates when SSL is needed
     let sslConfig = false;
     
-    if (databaseUrl.includes('sslmode=require') || process.env.NODE_ENV === 'production') {
+    // Check for any SSL requirement in the database URL
+    const needsSSL = databaseUrl.includes('sslmode=require') || 
+                     databaseUrl.includes('sslmode=prefer') ||
+                     databaseUrl.includes('ssl=true') ||
+                     databaseUrl.startsWith('postgres://') && process.env.NODE_ENV === 'production' ||
+                     databaseUrl.startsWith('postgresql://') && process.env.NODE_ENV === 'production';
+    
+    if (needsSSL) {
       sslConfig = {
-        rejectUnauthorized: false // Allow self-signed certificates
+        rejectUnauthorized: false,
+        requestCert: false,
+        agent: false,
+        secureProtocol: 'TLSv1_2_method'
       };
+      console.log('🔒 SSL enabled with self-signed certificate support');
+    }
+    
+    // Force SSL configuration for any postgres:// URL with sslmode parameter
+    if (databaseUrl.includes('sslmode=')) {
+      sslConfig = {
+        rejectUnauthorized: false,
+        requestCert: false,
+        agent: false,
+        secureProtocol: 'TLSv1_2_method'
+      };
+      console.log('🔒 SSL configuration forced due to sslmode parameter');
     }
     
     pool = new Pool({
