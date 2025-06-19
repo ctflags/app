@@ -17,9 +17,18 @@ async function initDatabase() {
   try {
     console.log('🐘 Connecting to PostgreSQL database...');
     
+    // Configure SSL based on environment and database URL
+    let sslConfig = false;
+    
+    if (databaseUrl.includes('sslmode=require') || process.env.NODE_ENV === 'production') {
+      sslConfig = {
+        rejectUnauthorized: false // Allow self-signed certificates
+      };
+    }
+    
     pool = new Pool({
       connectionString: databaseUrl,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      ssl: sslConfig
     });
 
     // Test the connection
