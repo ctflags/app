@@ -50,7 +50,6 @@ function generateParticipants(count = 35) {
 function main() {
   const args = process.argv.slice(2);
   const count = args[0] ? parseInt(args[0]) : 35;
-  const configFile = path.join(__dirname, '..', 'config', 'config.yaml');
   
   if (isNaN(count) || count <= 0) {
     console.error('Error: Count must be a positive number');
@@ -59,17 +58,8 @@ function main() {
   
   console.log(`🎯 Generating ${count} participants...`);
   
-  // Load existing config or create new one
+  // Create new config
   let config = {};
-  if (fs.existsSync(configFile)) {
-    try {
-      const existingContent = fs.readFileSync(configFile, 'utf8');
-      config = yaml.load(existingContent) || {};
-      console.log('📄 Loading existing config.yaml');
-    } catch (error) {
-      console.log('⚠️  Could not parse existing config, creating new one');
-    }
-  }
   
   // Generate new participants
   const participantConfig = generateParticipants(count);
@@ -83,19 +73,9 @@ function main() {
       forceQuotes: true
     });
     
-    fs.writeFileSync(configFile, yamlContent, 'utf8');
-    console.log(`✅ Updated ${count} participants in ${configFile}`);
-    
-    // Display first few for verification
-    console.log('\n📋 Sample participants:');
-    config.participants.slice(0, 5).forEach(p => {
-      console.log(`  - ${p.name}: ${p.token}`);
-    });
-    
-    if (count > 5) {
-      console.log(`  ... and ${count - 5} more`);
-    }
-    
+    console.log(yamlContent);
+
+    console.log(`✅ Generated ${count} participants`);    
   } catch (error) {
     console.error('❌ Error writing file:', error.message);
     process.exit(1);
