@@ -21,11 +21,58 @@
         <div class="login-box">
             <h1>🔒 Organizer Access</h1>
             <p>Please enter your organizer token to access the dashboard.</p>
-            <form method="GET" action="/organizer">
-                <input type="password" name="token" class="input-field" placeholder="Organizer Token" required>
+            <form id="loginForm">
+                <input type="password" id="tokenInput" class="input-field" placeholder="Organizer Token" required>
                 <button type="submit" class="login-btn">Access Dashboard</button>
             </form>
+            <div id="errorMessage" class="error" style="display: none;"></div>
         </div>
     </div>
+    
+    <script>
+        // Check if user is already authenticated via localStorage
+        (function() {
+            const token = localStorage.getItem('organizerToken');
+            if (token) {
+                // User is already logged in, redirect to dashboard with token
+                window.location.href = `/organizer?token=${token}`;
+                return;
+            }
+        })();
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const token = document.getElementById('tokenInput').value;
+            const errorDiv = document.getElementById('errorMessage');
+            
+            try {
+                const response = await fetch('/organizer/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: token })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Store token in localStorage
+                    localStorage.setItem('organizerToken', data.token);
+                    localStorage.setItem('organizerData', JSON.stringify(data.organizer));
+                    
+                    // Redirect to dashboard with token in URL temporarily (will be cleaned up)
+                    window.location.href = `/organizer?token=${data.token}`;
+                } else {
+                    errorDiv.textContent = data.error || 'Invalid token';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>

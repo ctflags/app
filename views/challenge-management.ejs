@@ -6,7 +6,7 @@
         <div class="header">
             <h1>🎯 Challenge Management</h1>
             <div class="nav-buttons">
-                <a href="/organizer?token=<%= token %>" class="nav-btn">← Back to Dashboard</a>
+                <button onclick="navigateToPage('/organizer')" class="nav-btn">← Back to Dashboard</button>
                 <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Challenge</button>
                 <button onclick="deleteAllChallenges()" class="nav-btn danger">🗑️ Delete All Challenges</button>
             </div>
@@ -82,7 +82,29 @@
     <%- include('partials/popup-text-confirm') %>
     <%- include('partials/popup-result') %>
 
-    <%- include('partials/admin-scripts', { token: token }) %>
+    <%- include('partials/admin-scripts') %>
+    
+    <script>
+        // Handle authentication
+        <% if (typeof needsAuth !== 'undefined' && needsAuth) { %>
+        // Page loaded without token, check localStorage and redirect if needed
+        (function() {
+            const token = localStorage.getItem('organizerToken');
+            if (token) {
+                window.location.href = `${window.location.pathname}?token=${token}`;
+            } else {
+                window.location.href = '/organizer';
+            }
+        })();
+        <% } else { %>
+        // Clean up URL if it contains token parameter
+        if (window.location.search.includes('token=')) {
+            const url = new URL(window.location);
+            url.search = '';
+            window.history.replaceState({}, document.title, url.toString());
+        }
+        <% } %>
+    </script>
     
     <script>
         let isEditing = false;
@@ -118,6 +140,16 @@
 
         function deleteAllChallenges() {
             adminUtils.deleteAllItems('/api/challenges', 'DELETE ALL CHALLENGES', 'challenges');
+        }
+
+        function navigateToPage(path) {
+            const token = localStorage.getItem('organizerToken');
+            if (!token) {
+                window.location.href = '/organizer';
+                return;
+            }
+            // Include token in URL for navigation (will be cleaned up by the target page)
+            window.location.href = `${path}?token=${token}`;
         }
 
         // Form submission handler

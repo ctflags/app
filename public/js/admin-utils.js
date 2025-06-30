@@ -2,26 +2,45 @@
  * Admin Utilities - Common functions for admin pages
  */
 class AdminUtils {
-    constructor(organizerToken) {
-        this.organizerToken = organizerToken;
+    constructor(organizerToken = null) {
+        this.organizerToken = organizerToken || this.getTokenFromStorage();
+    }
+
+    /**
+     * Get organizer token from localStorage
+     */
+    getTokenFromStorage() {
+        return localStorage.getItem('organizerToken');
+    }
+
+    /**
+     * Check if user is authenticated
+     */
+    isAuthenticated() {
+        return !!this.getTokenFromStorage();
     }
 
     /**
      * Make API request with token
      */
     async makeRequest(url, options = {}) {
+        const token = this.getTokenFromStorage();
+        
+        if (!token) {
+            // Redirect to login if no token
+            window.location.href = '/organizer';
+            return;
+        }
+
         const defaultOptions = {
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
                 ...options.headers
             }
         };
         
-        // Add token to URL if not already present
-        const separator = url.includes('?') ? '&' : '?';
-        const urlWithToken = url.includes('token=') ? url : `${url}${separator}token=${this.organizerToken}`;
-        
-        return fetch(urlWithToken, { ...defaultOptions, ...options });
+        return fetch(url, { ...defaultOptions, ...options });
     }
 
     /**
@@ -38,8 +57,13 @@ class AdminUtils {
                     });
                     
                     if (response.ok) {
-                        // Just reload the page silently - no need for success popup
-                        location.reload();
+                        // Navigate to the current page with token to refresh data
+                        const token = this.getTokenFromStorage();
+                        if (token) {
+                            window.location.href = `${window.location.pathname}?token=${token}`;
+                        } else {
+                            window.location.href = '/organizer';
+                        }
                     } else {
                         const error = await response.json();
                         showResult('error', '❌ Deletion Failed', error.message);
@@ -92,8 +116,13 @@ class AdminUtils {
             });
             
             if (response.ok) {
-                // Just reload the page silently - no need for success popup
-                location.reload();
+                // Navigate to the current page with token to refresh data
+                const token = this.getTokenFromStorage();
+                if (token) {
+                    window.location.href = `${window.location.pathname}?token=${token}`;
+                } else {
+                    window.location.href = '/organizer';
+                }
             } else {
                 const error = await response.json();
                 showResult('error', '❌ Error', 'Error: ' + error.message);
@@ -165,6 +194,15 @@ class AdminUtils {
                 element.value = '';
             }
         });
+    }
+
+    /**
+     * Logout user by clearing localStorage
+     */
+    logout() {
+        localStorage.removeItem('organizerToken');
+        localStorage.removeItem('organizerData');
+        window.location.href = '/organizer';
     }
 }
 

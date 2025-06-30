@@ -104,10 +104,10 @@
             </div>
             -->
             <div style="text-align: center; margin-bottom: 20px;">
-                <a href="/organizer/challenges?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">🎯 Manage Challenges</a>
-                <a href="/organizer/participants?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">👥 Manage Participants</a>
-                <a href="/organizer/submissions?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">📝 Manage Submissions</a>
-                <a href="/organizer/hints?token=<%= organizer.token %>" class="refresh-btn" style="text-decoration: none; margin: 0 10px;">💡 Manage Hint Views</a>
+                <button onclick="navigateToPage('/organizer/challenges')" class="refresh-btn" style="margin: 0 10px;">🎯 Manage Challenges</button>
+                <button onclick="navigateToPage('/organizer/participants')" class="refresh-btn" style="margin: 0 10px;">👥 Manage Participants</button>
+                <button onclick="navigateToPage('/organizer/submissions')" class="refresh-btn" style="margin: 0 10px;">📝 Manage Submissions</button>
+                <button onclick="navigateToPage('/organizer/hints')" class="refresh-btn" style="margin: 0 10px;">💡 Manage Hint Views</button>
             </div>
         </div>
 
@@ -127,10 +127,15 @@
         </div>
 
         <!-- Sorting Controls -->
-        <div style="background: #2d2d2d; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
-            <strong>Sort by:</strong>
-            <button id="sortByPoints" class="sort-btn" onclick="sortTable('points')">🏆 Points</button>
-            <button id="sortByName" class="sort-btn active" onclick="sortTable('name')">📝 Name</button>
+        <div style="background: #2d2d2d; border-radius: 8px; padding: 15px; margin: 20px 0; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>Sort by:</strong>
+                <button id="sortByPoints" class="sort-btn" onclick="sortTable('points')">🏆 Points</button>
+                <button id="sortByName" class="sort-btn active" onclick="sortTable('name')">📝 Name</button>
+            </div>
+            <div>
+                <button class="refresh-btn" onclick="refreshDashboard()" style="background: #00aa00;">🔄 Refresh Data</button>
+            </div>
         </div>
 
         <!-- Legend -->
@@ -218,25 +223,50 @@
 
     <script>
         function getRelativeTime(timestamp) {
+            if (!timestamp) return 'Never';
+            
             const now = new Date();
-            // SQLite CURRENT_TIMESTAMP returns UTC, so treat the timestamp as UTC
-            const past = new Date(timestamp + 'Z');
+            let past;
+            
+            // Try different timestamp formats
+            if (timestamp.includes('T')) {
+                // ISO format (YYYY-MM-DDTHH:mm:ss.sssZ or similar)
+                past = new Date(timestamp);
+            } else if (timestamp.includes(' ')) {
+                // SQLite format (YYYY-MM-DD HH:mm:ss)
+                past = new Date(timestamp + 'Z'); // Treat as UTC
+            } else {
+                // Fallback
+                past = new Date(timestamp);
+            }
+            
+            // Check if date parsing was successful
+            if (isNaN(past.getTime())) {
+                console.error('Invalid timestamp:', timestamp);
+                return 'Invalid date';
+            }
+            
             const diffInSeconds = Math.floor((now - past) / 1000);
             
+            // Handle negative differences (future dates)
+            if (diffInSeconds < 0) {
+                return 'Just now';
+            }
+            
             if (diffInSeconds < 60) {
-                return diffInSeconds + ' secs';
+                return diffInSeconds === 1 ? '1 sec' : diffInSeconds + ' secs';
             } else if (diffInSeconds < 3600) {
                 const minutes = Math.floor(diffInSeconds / 60);
-                return minutes + ' mins';
+                return minutes === 1 ? '1 min' : minutes + ' mins';
             } else if (diffInSeconds < 86400) {
                 const hours = Math.floor(diffInSeconds / 3600);
-                return hours + ' hrs';
+                return hours === 1 ? '1 hr' : hours + ' hrs';
             } else if (diffInSeconds < 2592000) {
                 const days = Math.floor(diffInSeconds / 86400);
-                return days + ' days';
+                return days === 1 ? '1 day' : days + ' days';
             } else {
                 const months = Math.floor(diffInSeconds / 2592000);
-                return months + ' months';
+                return months === 1 ? '1 month' : months + ' months';
             }
         }
         
@@ -248,7 +278,124 @@
         }
         
         function logout() {
+            localStorage.removeItem('organizerToken');
+            localStorage.removeItem('organizerData');
             window.location.href = '/organizer';
+        }
+        
+        function navigateToPage(path) {
+            const token = localStorage.getItem('organizerToken');
+            if (!token) {
+                window.location.href = '/organizer';
+                return;
+            }
+            // Include token in URL for navigation (will be cleaned up by the target page)
+            window.location.href = `${path}?token=${token}`;
+        }
+        
+        async function refreshDashboard() {
+            const refreshBtn = document.querySelector('button[onclick="refreshDashboard()"]');
+            const originalText = refreshBtn.innerHTML;
+            
+            try {
+                // Update button to show loading state
+                refreshBtn.innerHTML = '⏳ Refreshing...';
+                refreshBtn.disabled = true;
+                
+                const token = localStorage.getItem('organizerToken');
+                if (!token) {
+                    window.location.href = '/organizer';
+                    return;
+                }
+                
+                // Fetch fresh dashboard data
+                const response = await fetch('/api/organizer/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateDashboardData(data);
+                } else {
+                    console.error('Failed to refresh dashboard');
+                    alert('Failed to refresh dashboard. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+                alert('Network error. Please try again.');
+            } finally {
+                // Restore button state
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+            }
+        }
+        
+        function updateDashboardData(data) {
+            // Update statistics
+            const statBoxes = document.querySelectorAll('.stat-number');
+            if (statBoxes[0]) statBoxes[0].textContent = data.participants.length;
+            if (statBoxes[1]) statBoxes[1].textContent = data.challenges.length;
+            if (statBoxes[2]) statBoxes[2].textContent = data.participants.reduce((sum, p) => sum + (parseInt(p.solved_challenges) || 0), 0);
+            
+            // Update participant table
+            updateParticipantTable(data.participants, data.challenges, data.progressMatrix);
+            
+            // Update relative times
+            updateRelativeTimes();
+        }
+        
+        function updateParticipantTable(participants, challenges, progressMatrix) {
+            const fixedTbody = document.querySelector('.fixed-table tbody');
+            const scrollableTbody = document.querySelector('.scrollable-table tbody');
+            
+            // Clear existing rows
+            fixedTbody.innerHTML = '';
+            scrollableTbody.innerHTML = '';
+            
+            participants.forEach(function(participant, index) {
+                // Create fixed columns row
+                const fixedRow = document.createElement('tr');
+                fixedRow.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${participant.name}</strong><br></td>
+                    <td><strong>${participant.total_points || 0}</strong></td>
+                    <td>${parseInt(participant.solved_challenges) || 0}/${challenges.length}</td>
+                    <td>${participant.last_submission ? '<span class="relative-time" data-timestamp="' + participant.last_submission + '"></span>' : 'Never'}</td>
+                `;
+                fixedTbody.appendChild(fixedRow);
+                
+                // Create scrollable columns row
+                const scrollableRow = document.createElement('tr');
+                challenges.forEach(function(challenge) {
+                    const progress = progressMatrix[participant.token] && progressMatrix[participant.token][challenge.id];
+                    const solved = progress && progress.solved;
+                    const hintViewed = progress && progress.hint_viewed;
+                    
+                    let cssClass, symbol;
+                    if (solved && !hintViewed) {
+                        cssClass = 'solved';
+                        symbol = '✓';
+                    } else if (solved && hintViewed) {
+                        cssClass = 'solved-with-hint';
+                        symbol = '✓';
+                    } else if (!solved && hintViewed) {
+                        cssClass = 'attempted-with-hint';
+                        symbol = '✗';
+                    } else {
+                        cssClass = 'unsolved';
+                        symbol = '✗';
+                    }
+                    
+                    const cell = document.createElement('td');
+                    cell.className = cssClass;
+                    cell.textContent = symbol;
+                    scrollableRow.appendChild(cell);
+                });
+                scrollableTbody.appendChild(scrollableRow);
+            });
         }
         
         // Sort table function
@@ -296,6 +443,13 @@
                 fixedTbody.appendChild(participant.fixedRow);
                 scrollableTbody.appendChild(participant.scrollableRow);
             });
+        }
+        
+        // Clean up URL if it contains token parameter (from login redirect or refresh)
+        if (window.location.search.includes('token=')) {
+            const url = new URL(window.location);
+            url.search = '';
+            window.history.replaceState({}, document.title, url.toString());
         }
         
         // Update times on page load
