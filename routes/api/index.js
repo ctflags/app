@@ -29,4 +29,45 @@ router.post('/hint-viewed', (req, res, next) => {
   hintViewRoutes(req, res, next);
 });
 
+// Participant file access endpoint (public access to shared files)
+const fs = require('fs').promises;
+const path = require('path');
+const { HTTP_STATUS } = require('../../constants');
+const { asyncHandler } = require('../../utils/errors');
+
+router.get('/participant/files', asyncHandler(async (req, res) => {
+  try {
+    const files = await fs.readdir('/tmp/shared');
+    const fileDetails = await Promise.all(
+      files.map(async (filename) => {
+        const filePath = path.join('/tmp/shared', filename);
+        const stats = await fs.stat(filePath);
+        return {
+          name: filename,
+          size: stats.size,
+          uploadedAt: stats.mtime,
+          downloadUrl: `/api/participant/files/${encodeURIComponent(filename)}/download`
+        };
+      })
+    );
+
+    res.json(fileDetails);
+  } catch (error) {
+    console.error('Error reading shared directory:', error);
+    res.json([]);
+  }
+}));
+
+router.get('/participant/files/:filename/download', asyncHandler(async (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join('/tmp/shared', filename);
+
+  try {
+    await fs.access(filePath);
+    res.download(filePath, filename);
+  } catch (error) {
+    res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'File not found' });
+  }
+}));
+
 module.exports = router;

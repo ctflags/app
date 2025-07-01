@@ -46,6 +46,40 @@
         .result-popup p { margin: 0 0 20px 0; color: #fff; }
         .result-close-btn { background: #00ff00; color: #000; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .result-close-btn:hover { background: #00cc00; }
+        .files-section {
+            background: #2d2d2d;
+            border-radius: 8px;
+            margin: 20px 0;
+            padding: 20px;
+        }
+        .file-item {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .download-btn {
+            background: #00ff00;
+            color: #000;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover {
+            background: #00cc00;
+        }
         .logo-bottom-center {
             position: fixed;
             bottom: 20px;
@@ -114,6 +148,16 @@
             <% } %>
           </div>
         <% }); %>
+
+        <!-- Files Section -->
+        <div class="files-section">
+            <h3 style="color: #00ff00; margin-top: 0;">📁 Shared Files</h3>
+            <p style="color: #ccc; margin-bottom: 20px;">Download files shared by the organizers for the CTF challenges</p>
+            
+            <div id="participantFileList">
+                <!-- Files will be loaded here -->
+            </div>
+        </div>
     </div>
 
     <!-- Hint Popup -->
@@ -278,6 +322,59 @@
                 }
             }
         });
+
+        // Load shared files for participants
+        async function loadParticipantFiles() {
+            try {
+                const response = await fetch('/api/participant/files');
+                
+                if (response.ok) {
+                    const files = await response.json();
+                    displayParticipantFiles(files);
+                } else {
+                    console.error('Failed to load files');
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        function displayParticipantFiles(files) {
+            const fileList = document.getElementById('participantFileList');
+            
+            if (files.length === 0) {
+                fileList.innerHTML = '<p style="color: #888; text-align: center;">No files available yet</p>';
+                return;
+            }
+            
+            fileList.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <span style="font-size: 18px;">📄</span>
+                        <div>
+                            <div style="font-weight: bold;">${file.name}</div>
+                            <div style="font-size: 12px; color: #888;">
+                                ${formatFileSize(file.size)} • Available for download
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="${file.downloadUrl}" class="download-btn" download>⬇️ Download</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Load files on page load
+        loadParticipantFiles();
     </script>
 </body>
 </html>

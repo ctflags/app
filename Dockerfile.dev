@@ -14,12 +14,16 @@ RUN npm ci
 # Copy the rest of the source files
 COPY . .
 
+# Create shared directory for file uploads
+RUN mkdir -p /tmp/shared
+
 # Create a non-root user but don't switch to it yet (for better file permissions with bind mounts)
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodeuser -u 1001 -G nodejs
 
-# Change ownership of the app directory
-RUN chown -R nodeuser:nodejs /app
+# Change ownership of the app directory and shared directory
+RUN chown -R nodeuser:nodejs /app && \
+    chown -R nodeuser:nodejs /tmp/shared
 
 # Switch to non-root user
 USER nodeuser
