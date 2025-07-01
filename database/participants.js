@@ -73,13 +73,25 @@ async function createParticipant(token, name) {
 }
 
 // Update an existing participant
-async function updateParticipant(token, name) {
+async function updateParticipant(originalToken, updates) {
   const pool = getDatabase();
-  const result = await pool.query(
-    'UPDATE participants SET name = $1 WHERE token = $2',
-    [name, token]
-  );
-  return { token, name, changes: result.rowCount };
+  const { token, name } = updates;
+  
+  // If token is being changed, update both token and name
+  if (token && token !== originalToken) {
+    const result = await pool.query(
+      'UPDATE participants SET token = $1, name = $2 WHERE token = $3',
+      [token, name, originalToken]
+    );
+    return { token, name, changes: result.rowCount };
+  } else {
+    // Only update name if token hasn't changed
+    const result = await pool.query(
+      'UPDATE participants SET name = $1 WHERE token = $2',
+      [name, originalToken]
+    );
+    return { token: originalToken, name, changes: result.rowCount };
+  }
 }
 
 // Delete a participant

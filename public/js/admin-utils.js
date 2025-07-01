@@ -125,10 +125,12 @@ class AdminUtils {
                 }
             } else {
                 const error = await response.json();
-                showResult('error', '❌ Error', 'Error: ' + error.message);
+                const errorMessage = error.message || error.error || 'Unknown error occurred';
+                showResult('error', '❌ Error', 'Error: ' + errorMessage);
             }
         } catch (error) {
-            showResult('error', '❌ Network Error', 'Error: ' + error.message);
+            const errorMessage = error.message || 'Network error occurred';
+            showResult('error', '❌ Network Error', 'Error: ' + errorMessage);
         }
     }
 

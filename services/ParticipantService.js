@@ -66,7 +66,7 @@ class ParticipantService {
       
       // Business logic: Check for duplicate token
       try {
-        await getParticipantByToken(token);
+        await this.getParticipantByToken(token);
         throw new ConflictError('Participant token already exists');
       } catch (error) {
         // If participant not found, we can proceed
@@ -89,19 +89,43 @@ class ParticipantService {
   /**
    * Update an existing participant
    */
-  async updateParticipant(token, participantData) {
+  async updateParticipant(originalToken, participantData) {
     try {
       // Verify participant exists
-      await this.getParticipantByToken(token);
+      await this.getParticipantByToken(originalToken);
       
-      const { name } = participantData;
+      const { token, name } = participantData;
       
       // Business logic: Validate name
       if (!name || name.trim().length === 0) {
         throw new ConflictError('Participant name cannot be empty');
       }
       
-      const result = await updateParticipant(token, name.trim());
+      // If token is being changed, validate new token
+      if (token && token !== originalToken) {
+        if (!this.isValidTokenFormat(token)) {
+          throw new ConflictError('Token must contain only alphanumeric characters and hyphens');
+        }
+        
+        // Check if new token already exists (excluding current participant)
+        try {
+          await this.getParticipantByToken(token);
+          // If we found a participant with this token, it's a duplicate
+          throw new ConflictError('Participant token already exists');
+        } catch (error) {
+          // If participant not found, we can proceed with the token change
+          if (!(error instanceof NotFoundError)) {
+            throw error;
+          }
+        }
+      }
+      
+      const updates = {
+        token: token || originalToken,
+        name: name.trim()
+      };
+      
+      const result = await updateParticipant(originalToken, updates);
       return {
         participant: result,
         message: SUCCESS_MESSAGES.PARTICIPANT_UPDATED
