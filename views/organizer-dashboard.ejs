@@ -87,9 +87,25 @@
             background: #ff6b35;
             color: #fff;
         }
+        .logo-bottom-center {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        .logo-bottom-center img {
+            max-width: 140px;
+            height: auto;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
+    <div class="logo-bottom-center">
+        <img src="/images/logo.png" alt="Exoscale">
+    </div>
+    
     <div class="container">
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">

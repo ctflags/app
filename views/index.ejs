@@ -90,6 +90,18 @@
             font-size: 1.2em;
             margin-right: 8px;
         }
+        .logo-bottom-center {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        .logo-bottom-center img {
+            max-width: 160px;
+            height: auto;
+            opacity: 0.8;
+        }
         
         @media (max-width: 600px) {
             .welcome-box {
@@ -103,6 +115,10 @@
     </style>
 </head>
 <body>
+    <div class="logo-bottom-center">
+        <img src="/images/logo.png" alt="Exoscale">
+    </div>
+    
     <div class="container">
         <div class="welcome-box">
             <h1 class="platform-title">🚩 CTF Platform</h1>
