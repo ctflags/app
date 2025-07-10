@@ -51,6 +51,44 @@ router.get('/organizer', async (req, res) => {
   }
 });
 
+// Admin panel page
+router.get('/organizer/admin', async (req, res) => {
+  const token = req.query.token || req.headers['authorization']?.replace('Bearer ', '');
+  
+  // If no token, render page with authentication check (will redirect via JS)
+  if (!token) {
+    return res.render('admin-panel', {
+      participants: [],
+      challenges: [],
+      token: null,
+      needsAuth: true
+    });
+  }
+
+  try {
+    const { getOrganizerByToken } = require('../database/organizers');
+    const organizer = await getOrganizerByToken(token);
+    
+    if (!organizer) {
+      return res.status(403).render('access-denied');
+    }
+
+    // Token is valid, show admin panel
+    const participants = await getParticipantsWithProgress();
+    const challenges = await getAllChallenges();
+    
+    res.render('admin-panel', {
+      participants: participants,
+      challenges: challenges,
+      token: organizer.token,
+      needsAuth: false
+    });
+  } catch (error) {
+    console.error('Admin panel error:', error);
+    res.status(500).send('Database error');
+  }
+});
+
 // Challenge management page
 router.get('/organizer/challenges', async (req, res) => {
   const token = req.query.token || req.headers['authorization']?.replace('Bearer ', '');

@@ -3,6 +3,7 @@
 <head>
     <title>CTF - <%= participant.name %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/admin-shared.css">
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
         .container { max-width: 800px; margin: 0 auto; }
@@ -80,42 +81,9 @@
         .download-btn:hover {
             background: #00cc00;
         }
-        .powered-by {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(45, 45, 45, 0.9);
-            padding: 12px 18px;
-            border-radius: 10px;
-            font-size: 16px;
-            color: #888;
-            z-index: 100;
-            transition: opacity 0.2s;
-        }
-        .powered-by:hover {
-            opacity: 1;
-        }
-        .powered-by img {
-            max-width: 90px;
-            height: auto;
-            opacity: 0.9;
-            filter: brightness(1.3) saturate(1.1);
-        }
-        .powered-by-text {
-            font-weight: 500;
-            color: #ccc;
-        }
     </style>
 </head>
 <body>
-    <div class="powered-by">
-        <span class="powered-by-text">Powered by</span>
-        <img src="/images/logo.png" alt="Exoscale">
-    </div>
-    
     <div class="container">
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
