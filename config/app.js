@@ -19,44 +19,10 @@ function configureApp(app) {
  * Configure error handling middleware
  */
 function configureErrorHandling(app) {
-  // Error handling middleware for API routes
-  app.use('/api', (err, req, res, next) => {
-    console.error('API Error:', err.message);
-    
-    // Handle authentication errors
-    if (err.name === 'UnauthorizedError') {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    if (err.name === 'ForbiddenError') {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
-    // Handle validation errors
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({ error: err.message });
-    }
-    
-    // Generic error
-    res.status(500).json({ error: 'Internal server error' });
-  });
+  const { errorHandler } = require('../utils/errors');
   
-  // Error handling for web routes
-  app.use((err, req, res, next) => {
-    console.error('Web Error:', err.message);
-    
-    // Handle authentication errors for web routes
-    if (err.name === 'UnauthorizedError' && req.path.startsWith('/organizer')) {
-      return res.render('organizer-login');
-    }
-    
-    if (err.name === 'ForbiddenError') {
-      return res.status(403).render('access-denied');
-    }
-    
-    // Generic error page
-    res.status(500).send('Internal Server Error');
-  });
+  // Use the comprehensive error handler from utils/errors.js
+  app.use(errorHandler);
 }
 
 module.exports = { configureApp, configureErrorHandling };

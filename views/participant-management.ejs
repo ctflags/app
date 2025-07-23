@@ -8,6 +8,8 @@
             <div class="nav-buttons">
                 <button onclick="navigateToPage('/organizer')" class="nav-btn">← Back to Dashboard</button>
                 <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Participant</button>
+                <button onclick="showUploadForm()" class="nav-btn secondary">📤 Upload YAML</button>
+                <button onclick="deleteAllParticipants()" class="nav-btn danger">🗑️ Delete All</button>
             </div>
         </div>
 
@@ -38,6 +40,29 @@
                 </div>
                 <button type="submit" class="form-btn" id="submitBtn">Create Participant</button>
                 <button type="button" class="form-btn cancel" onclick="hideForm()">Cancel</button>
+            </form>
+        </div>
+
+        <!-- YAML Upload Form -->
+        <div id="uploadForm" class="form-container hidden">
+            <h3>Upload Participants from YAML</h3>
+            <p style="color: #ccc; margin-bottom: 20px;">
+                Upload a YAML file with participants in the following format:<br>
+                <code style="background: #1a1a1a; padding: 10px; display: block; margin: 10px 0; border-radius: 4px;">
+participants:<br>
+&nbsp;&nbsp;- token: "p1"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name: "Sample Player01"<br>
+&nbsp;&nbsp;- token: "p2"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name: "Sample Player02"
+                </code>
+            </p>
+            <form id="uploadFormElement" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="yamlFile">YAML File</label>
+                    <input type="file" id="yamlFile" name="yamlFile" accept=".yaml,.yml,.txt" required>
+                </div>
+                <button type="submit" class="form-btn">Upload Participants</button>
+                <button type="button" class="form-btn cancel" onclick="hideUploadForm()">Cancel</button>
             </form>
         </div>
 
@@ -144,6 +169,46 @@
             adminUtils.deleteItem('/api/participants', encodeURIComponent(token), name, 'Participant');
         }
 
+        function showUploadForm() {
+            document.getElementById('uploadForm').classList.remove('hidden');
+            document.getElementById('participantForm').classList.add('hidden');
+        }
+
+        function hideUploadForm() {
+            document.getElementById('uploadForm').classList.add('hidden');
+            document.getElementById('uploadFormElement').reset();
+        }
+
+        function deleteAllParticipants() {
+            window.popupManager.showConfirmation(
+                'Delete All Participants',
+                'Are you sure you want to delete ALL participants and their related records (submissions, hint views)?<br><br><strong>This action cannot be undone!</strong>',
+                async () => {
+                    try {
+                        const token = localStorage.getItem('organizerToken');
+                        const response = await fetch('/api/participants', {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            showResult('success', 'Success', result.message, true);
+                        } else {
+                            showResult('error', 'Error', result.error || 'Failed to delete participants');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting all participants:', error);
+                        showResult('error', 'Error', 'Connection error while deleting participants');
+                    }
+                }
+            );
+        }
+
         // Form submission handler
         document.getElementById('participantFormElement').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -156,6 +221,44 @@
 
             const endpoint = isEditing ? `/api/participants/${encodeURIComponent(formData.get('originalToken'))}` : '/api/participants';
             await adminUtils.submitForm(endpoint, participantData, isEditing, 'Participant');
+        });
+
+        // YAML upload form submission handler
+        document.getElementById('uploadFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+                
+                const token = localStorage.getItem('organizerToken');
+                const response = await fetch('/api/participants/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', 'Upload Successful', result.message, true);
+                    hideUploadForm();
+                } else {
+                    showResult('error', 'Upload Failed', result.error || 'Failed to upload participants');
+                }
+            } catch (error) {
+                console.error('Error uploading YAML:', error);
+                showResult('error', 'Error', 'Connection error while uploading file');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         });
     </script>
 </body>

@@ -114,6 +114,33 @@ async function deleteParticipant(token) {
   return { token, changes: result.rowCount };
 }
 
+// Delete all participants and their related records
+async function deleteAllParticipants() {
+  const pool = getDatabase();
+  
+  // Delete all related records first
+  await pool.query('DELETE FROM submissions');
+  await pool.query('DELETE FROM hint_views');
+  
+  // Then delete all participants
+  const result = await pool.query('DELETE FROM participants');
+  return { changes: result.rowCount };
+}
+
+// Create multiple participants from array
+async function createMultipleParticipants(participantsData) {
+  const pool = getDatabase();
+  const results = [];
+  
+  for (const participantData of participantsData) {
+    const { token, name } = participantData;
+    await pool.query('INSERT INTO participants (token, name) VALUES ($1, $2)', [token, name]);
+    results.push({ token, name });
+  }
+  
+  return results;
+}
+
 module.exports = {
   getParticipantByToken,
   getParticipantsWithProgress,
@@ -121,5 +148,7 @@ module.exports = {
   getAllParticipants,
   createParticipant,
   updateParticipant,
-  deleteParticipant
+  deleteParticipant,
+  deleteAllParticipants,
+  createMultipleParticipants
 };

@@ -1,4 +1,4 @@
-const { getParticipantByToken, getParticipantsWithProgress, getAllParticipants, createParticipant, updateParticipant, deleteParticipant, getParticipantProgress } = require('../database/participants');
+const { getParticipantByToken, getParticipantsWithProgress, getAllParticipants, createParticipant, updateParticipant, deleteParticipant, deleteAllParticipants, createMultipleParticipants, getParticipantProgress } = require('../database/participants');
 const { NotFoundError, ConflictError, DatabaseError } = require('../utils/errors');
 const { SUCCESS_MESSAGES, ERROR_MESSAGES } = require('../constants');
 
@@ -225,6 +225,100 @@ class ParticipantService {
     // Allow alphanumeric characters, hyphens, and underscores
     const tokenRegex = /^[a-zA-Z0-9\-_]+$/;
     return tokenRegex.test(token);
+  }
+
+  /**
+   * Delete all participants and their related records
+   */
+  async deleteAllParticipants() {
+    try {
+      const result = await deleteAllParticipants();
+      return {
+        deletedCount: result.changes,
+        message: `Successfully deleted ${result.changes} participants and all related records`
+      };
+    } catch (error) {
+      throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
+    }
+  }
+
+  /**
+   * Create multiple participants from YAML data
+   */
+  async createMultipleParticipants(participantsData) {
+    try {
+      // Basic validation
+      if (!Array.isArray(participantsData)) {
+        throw new ConflictError('Participants data must be an array');
+      }
+
+      const validatedParticipants = [];
+      const errors = [];
+
+      // Validate each participant
+      for (let i = 0; i < participantsData.length; i++) {
+        const participant = participantsData[i];
+        
+        if (!participant.token || !participant.name) {
+          errors.push(`Participant ${i + 1}: Missing token or name`);
+          continue;
+        }
+
+        if (!this.isValidTokenFormat(participant.token)) {
+          errors.push(`Participant ${i + 1}: Invalid token format`);
+          continue;
+        }
+
+        // Check for duplicates within the input data
+        const duplicateInInput = validatedParticipants.find(p => p.token === participant.token);
+        if (duplicateInInput) {
+          errors.push(`Participant ${i + 1}: Duplicate token "${participant.token}" in input data`);
+          continue;
+        }
+
+        validatedParticipants.push({
+          token: participant.token.trim(),
+          name: participant.name.trim()
+        });
+      }
+
+      if (errors.length > 0) {
+        throw new ConflictError(`Validation errors:\n${errors.join('\n')}`);
+      }
+
+      if (validatedParticipants.length === 0) {
+        throw new ConflictError('No valid participants found in the data');
+      }
+
+      // Check for existing tokens in database
+      const existingTokens = [];
+      for (const participant of validatedParticipants) {
+        try {
+          await this.getParticipantByToken(participant.token);
+          existingTokens.push(participant.token);
+        } catch (error) {
+          if (!(error instanceof NotFoundError)) {
+            throw error;
+          }
+        }
+      }
+
+      if (existingTokens.length > 0) {
+        throw new ConflictError(`The following tokens already exist: ${existingTokens.join(', ')}`);
+      }
+
+      // Create all participants
+      const results = await createMultipleParticipants(validatedParticipants);
+      
+      return {
+        participants: results,
+        createdCount: results.length,
+        message: `Successfully created ${results.length} participants`
+      };
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
+      throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
+    }
   }
 
   /**
