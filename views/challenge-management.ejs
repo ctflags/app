@@ -6,8 +6,9 @@
         <div class="header">
             <h1>🎯 Challenge Management</h1>
             <div class="nav-buttons">
-                <button onclick="navigateToPage('/organizer')" class="nav-btn">← Back to Dashboard</button>
+                <button onclick="navigateToPage('/organizer/admin')" class="nav-btn">← Back to Admin Panel</button>
                 <button onclick="showCreateForm()" class="nav-btn primary">+ Add New Challenge</button>
+                <button onclick="showUploadForm()" class="nav-btn secondary">📤 Upload YAML</button>
                 <button onclick="deleteAllChallenges()" class="nav-btn danger">🗑️ Delete All Challenges</button>
             </div>
         </div>
@@ -39,6 +40,34 @@
                 </div>
                 <button type="submit" class="form-btn" id="submitBtn">Create Challenge</button>
                 <button type="button" class="form-btn cancel" onclick="hideForm()">Cancel</button>
+            </form>
+        </div>
+
+        <!-- YAML Upload Form -->
+        <div id="uploadForm" class="form-container hidden">
+            <h3>Upload Challenges from YAML</h3>
+            <p style="color: #ccc; margin-bottom: 20px;">
+                Upload a YAML file with challenges in the following format:<br>
+                <code style="background: #1a1a1a; padding: 10px; display: block; margin: 10px 0; border-radius: 4px;">
+challenges:<br>
+&nbsp;&nbsp;- name: "Web Challenge 1"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;description: "Find the hidden flag"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;flag: "flag{hidden_secret}"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;points: 100<br>
+&nbsp;&nbsp;&nbsp;&nbsp;hint: "Check the source code"<br>
+&nbsp;&nbsp;- name: "Crypto Challenge 1"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;description: "Decode this message"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;flag: "flag{crypto_master}"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;points: 150
+                </code>
+            </p>
+            <form id="uploadFormElement" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="yamlFile">YAML File</label>
+                    <input type="file" id="yamlFile" name="yamlFile" accept=".yaml,.yml,.txt" required>
+                </div>
+                <button type="submit" class="form-btn">Upload Challenges</button>
+                <button type="button" class="form-btn cancel" onclick="hideUploadForm()">Cancel</button>
             </form>
         </div>
 
@@ -139,7 +168,43 @@
         }
 
         function deleteAllChallenges() {
-            adminUtils.deleteAllItems('/api/challenges', 'DELETE ALL CHALLENGES', 'challenges');
+            window.popupManager.showConfirmation(
+                'Delete All Challenges',
+                'Are you sure you want to delete ALL challenges and their related records (submissions, hint views)?<br><br><strong>This action cannot be undone!</strong>',
+                async () => {
+                    try {
+                        const token = localStorage.getItem('organizerToken');
+                        const response = await fetch('/api/challenges/delete-all', {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            showResult('success', 'Success', result.message, true);
+                        } else {
+                            showResult('error', 'Error', result.error || 'Failed to delete challenges');
+                        }
+                    } catch (error) {
+                        console.error('Error deleting all challenges:', error);
+                        showResult('error', 'Error', 'Connection error while deleting challenges');
+                    }
+                }
+            );
+        }
+
+        function showUploadForm() {
+            document.getElementById('uploadForm').classList.remove('hidden');
+            document.getElementById('challengeForm').classList.add('hidden');
+        }
+
+        function hideUploadForm() {
+            document.getElementById('uploadForm').classList.add('hidden');
+            document.getElementById('uploadFormElement').reset();
         }
 
         function navigateToPage(path) {
@@ -167,6 +232,44 @@
 
             const endpoint = isEditing ? `/api/challenges/${formData.get('id')}` : '/api/challenges';
             await adminUtils.submitForm(endpoint, challengeData, isEditing, 'Challenge');
+        });
+
+        // YAML upload form submission handler
+        document.getElementById('uploadFormElement').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+                
+                const token = localStorage.getItem('organizerToken');
+                const response = await fetch('/api/challenges/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult('success', 'Upload Successful', result.message, true);
+                    hideUploadForm();
+                } else {
+                    showResult('error', 'Upload Failed', result.error || 'Failed to upload challenges');
+                }
+            } catch (error) {
+                console.error('Error uploading YAML:', error);
+                showResult('error', 'Error', 'Connection error while uploading file');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         });
     </script>
 </body>

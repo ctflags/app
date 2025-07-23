@@ -1,4 +1,4 @@
-const { getAllChallenges, getChallengesWithSolutions, getChallengeById, createChallenge, updateChallenge, deleteChallenge } = require('../database/challenges');
+const { getAllChallenges, getChallengesWithSolutions, getChallengeById, createChallenge, updateChallenge, deleteChallenge, deleteAllChallenges, createMultipleChallenges } = require('../database/challenges');
 const { NotFoundError, ConflictError, DatabaseError } = require('../utils/errors');
 const { SUCCESS_MESSAGES, ERROR_MESSAGES } = require('../constants');
 
@@ -135,30 +135,95 @@ class ChallengeService {
   }
 
   /**
-   * Delete all challenges
+   * Delete all challenges and their related records
    */
   async deleteAllChallenges() {
     try {
-      const { getDatabase } = require('../database');
-      const pool = getDatabase();
-      
-      // Get counts before deletion
-      const challengeCount = await pool.query('SELECT COUNT(*) as count FROM challenges');
-      const submissionCount = await pool.query('SELECT COUNT(*) as count FROM submissions');
-      const hintViewCount = await pool.query('SELECT COUNT(*) as count FROM hint_views');
-      
-      // Delete all related data in correct order (foreign key constraints)
-      await pool.query('DELETE FROM hint_views');
-      await pool.query('DELETE FROM submissions');
-      await pool.query('DELETE FROM challenges');
-      
+      const result = await deleteAllChallenges();
       return {
-        challengesDeleted: parseInt(challengeCount.rows[0].count),
-        submissionsDeleted: parseInt(submissionCount.rows[0].count),
-        hintViewsDeleted: parseInt(hintViewCount.rows[0].count),
-        message: 'All challenges and related data deleted successfully'
+        deletedCount: result.changes,
+        message: `Successfully deleted ${result.changes} challenges and all related records`
       };
     } catch (error) {
+      throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
+    }
+  }
+
+  /**
+   * Create multiple challenges from YAML data
+   */
+  async createMultipleChallenges(challengesData) {
+    try {
+      // Basic validation
+      if (!Array.isArray(challengesData)) {
+        throw new ConflictError('Challenges data must be an array');
+      }
+
+      const validatedChallenges = [];
+      const errors = [];
+
+      // Validate each challenge
+      for (let i = 0; i < challengesData.length; i++) {
+        const challenge = challengesData[i];
+        
+        if (!challenge.name || !challenge.description || !challenge.flag) {
+          errors.push(`Challenge ${i + 1}: Missing required fields (name, description, flag)`);
+          continue;
+        }
+
+        if (!challenge.flag.trim()) {
+          errors.push(`Challenge ${i + 1}: Flag cannot be empty`);
+          continue;
+        }
+
+        // Check for duplicates within the input data
+        const duplicateInInput = validatedChallenges.find(c => c.name.toLowerCase() === challenge.name.toLowerCase());
+        if (duplicateInInput) {
+          errors.push(`Challenge ${i + 1}: Duplicate name "${challenge.name}" in input data`);
+          continue;
+        }
+
+        validatedChallenges.push({
+          name: challenge.name.trim(),
+          description: challenge.description.trim(),
+          flag: challenge.flag.trim(),
+          points: challenge.points || 100,
+          hint: challenge.hint ? challenge.hint.trim() : ''
+        });
+      }
+
+      if (errors.length > 0) {
+        throw new ConflictError(`Validation errors:\n${errors.join('\n')}`);
+      }
+
+      if (validatedChallenges.length === 0) {
+        throw new ConflictError('No valid challenges found in the data');
+      }
+
+      // Check for existing challenge names in database
+      const existingChallenges = await getAllChallenges();
+      const existingNames = [];
+      for (const challenge of validatedChallenges) {
+        const duplicate = existingChallenges.find(c => c.name.toLowerCase() === challenge.name.toLowerCase());
+        if (duplicate) {
+          existingNames.push(challenge.name);
+        }
+      }
+
+      if (existingNames.length > 0) {
+        throw new ConflictError(`The following challenge names already exist: ${existingNames.join(', ')}`);
+      }
+
+      // Create all challenges
+      const results = await createMultipleChallenges(validatedChallenges);
+      
+      return {
+        challenges: results,
+        createdCount: results.length,
+        message: `Successfully created ${results.length} challenges`
+      };
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
       throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
     }
   }

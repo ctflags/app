@@ -73,11 +73,43 @@ async function deleteChallenge(id) {
   return { id, changes: result.rowCount };
 }
 
+// Delete all challenges and their related records
+async function deleteAllChallenges() {
+  const pool = getDatabase();
+  
+  // Delete all related records first
+  await pool.query('DELETE FROM submissions');
+  await pool.query('DELETE FROM hint_views');
+  
+  // Then delete all challenges
+  const result = await pool.query('DELETE FROM challenges');
+  return { changes: result.rowCount };
+}
+
+// Create multiple challenges from array
+async function createMultipleChallenges(challengesData) {
+  const pool = getDatabase();
+  const results = [];
+  
+  for (const challengeData of challengesData) {
+    const { name, description, flag, points = 100, hint = '' } = challengeData;
+    const result = await pool.query(
+      'INSERT INTO challenges (name, description, flag, points, hint) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, description, flag, points, hint]
+    );
+    results.push(result.rows[0]);
+  }
+  
+  return results;
+}
+
 module.exports = {
   getAllChallenges,
   getChallengesWithSolutions,
   getChallengeById,
   createChallenge,
   updateChallenge,
-  deleteChallenge
+  deleteChallenge,
+  deleteAllChallenges,
+  createMultipleChallenges
 };
