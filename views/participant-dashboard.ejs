@@ -311,7 +311,11 @@
         // Load shared files for participants
         async function loadParticipantFiles() {
             try {
-                const response = await fetch('/api/participant/files');
+                const response = await fetch('/api/participant/files', {
+                    headers: {
+                        'Authorization': `Bearer <%= token %>`
+                    }
+                });
                 
                 if (response.ok) {
                     const files = await response.json();
@@ -344,10 +348,38 @@
                         </div>
                     </div>
                     <div>
-                        <a href="${file.downloadUrl}" class="download-btn" download>⬇️ Download</a>
+                        <button onclick="downloadFile('${file.name}')" class="download-btn">⬇️ Download</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function downloadFile(filename) {
+            try {
+                const response = await fetch(`/api/participant/files/${encodeURIComponent(filename)}/download`, {
+                    headers: {
+                        'Authorization': `Bearer <%= token %>`
+                    }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    console.error('Failed to download file');
+                    alert('Failed to download file. You may not have access to this file.');
+                }
+            } catch (error) {
+                console.error('Error downloading file:', error);
+                alert('Error downloading file. Please try again.');
+            }
         }
 
         function formatFileSize(bytes) {

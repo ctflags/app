@@ -29,17 +29,47 @@ router.post('/hint-viewed', (req, res, next) => {
   hintViewRoutes(req, res, next);
 });
 
-// Participant file access endpoint (public access to shared files)
+// Participant file access endpoint with name-based filtering
 const fs = require('fs').promises;
 const path = require('path');
 const { HTTP_STATUS } = require('../../constants');
 const { asyncHandler } = require('../../utils/errors');
+const { requireParticipantAuth } = require('../../middleware/auth');
 
-router.get('/participant/files', asyncHandler(async (req, res) => {
+// Helper function to check if participant can access a file
+function canParticipantAccessFile(participantName, filename) {
+  const filenameLower = filename.toLowerCase();
+  
+  // Allow access to files that start with "common."
+  if (filenameLower.startsWith('common.')) {
+    return true;
+  }
+  
+  // Extract potential player identifier from participant name
+  // e.g., "Sample Player01" -> "player01", "player01" -> "player01"
+  const playerMatch = participantName.toLowerCase().match(/player(\d+)/);
+  if (playerMatch) {
+    const playerId = `player${playerMatch[1]}`;
+    return filenameLower.startsWith(playerId + '.');
+  }
+  
+  // Fallback: allow access if filename starts with participant's name followed by a dot
+  // e.g., "alice" can access "alice.config", "alice.yaml", etc.
+  return filenameLower.startsWith(participantName.toLowerCase() + '.');
+}
+
+router.get('/participant/files', requireParticipantAuth, asyncHandler(async (req, res) => {
   try {
+    const participantName = req.participant.name;
     const files = await fs.readdir('/tmp/shared');
+    
+    // Filter files based on participant name
+    const accessibleFiles = files.filter(filename => 
+      canParticipantAccessFile(participantName, filename)
+    );
+    
     const fileDetails = await Promise.all(
-      files.map(async (filename) => {
+      accessibleFiles.map(async (filename) => {
         const filePath = path.join('/tmp/shared', filename);
         const stats = await fs.stat(filePath);
         return {
@@ -58,9 +88,15 @@ router.get('/participant/files', asyncHandler(async (req, res) => {
   }
 }));
 
-router.get('/participant/files/:filename/download', asyncHandler(async (req, res) => {
+router.get('/participant/files/:filename/download', requireParticipantAuth, asyncHandler(async (req, res) => {
   const filename = req.params.filename;
+  const participantName = req.participant.name;
   const filePath = path.join('/tmp/shared', filename);
+
+  // Check if participant can access this file
+  if (!canParticipantAccessFile(participantName, filename)) {
+    return res.status(HTTP_STATUS.FORBIDDEN).json({ error: 'Access denied to this file' });
+  }
 
   try {
     await fs.access(filePath);
