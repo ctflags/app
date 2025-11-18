@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/ctflags/app/compare/v1.0.0...v1.0.1) (2025-11-18)
+
+
+### Bug Fixes
+
+* force trigger CI for testing purposes ([25b5592](https://github.com/ctflags/app/commit/25b5592faf0ce8956605c8b63b8ff4f6f6193775))
+
 # 1.0.0 (2025-11-18)
 
 
