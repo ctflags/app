@@ -1,6 +1,6 @@
 ## Purpose
 
-Sample webapp to be used for CTF session
+Web application to be used for CTF session. It provides a participant access to check the flags found, and an admin access to follow the leaderboard.
 
 ## Running it locally
 
