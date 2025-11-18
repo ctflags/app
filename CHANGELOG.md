@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/ctflags/app/compare/v1.0.1...v1.0.2) (2025-11-18)
+
+
+### Bug Fixes
+
+* add default config ([fe4d901](https://github.com/ctflags/app/commit/fe4d9013ed8ce0ff97561bca89fac59d7758060c))
+
 ## [1.0.1](https://github.com/ctflags/app/compare/v1.0.0...v1.0.1) (2025-11-18)
 
 
