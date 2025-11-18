@@ -47,7 +47,7 @@ jobs:
             echo "New release created: v$NEW_VERSION"
           else
             echo "build_needed=false" >> $GITHUB_OUTPUT
-            echo "ℹNo release created"
+            echo "No release created"
           fi
 
       - name: Set up Docker Buildx
@@ -81,7 +81,7 @@ jobs:
       - name: Build summary
         run: |
           if [[ "${{ steps.semantic-release.outputs.build_needed }}" == "true" ]]; then
-            echo "✅ Tag ${{ steps.semantic-release.outputs.new_tag }} created and image built"
+            echo "Tag ${{ steps.semantic-release.outputs.new_tag }} created and image built"
           else
-            echo "ℹ️ No new tag created - skipping build"
+            echo "No new tag created - skipping build"
           fi
