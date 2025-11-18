@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/ctflags/app/compare/v1.0.3...v1.0.4) (2025-11-18)
+
+
+### Bug Fixes
+
+* build for arm64 too ([936d0dc](https://github.com/ctflags/app/commit/936d0dc9e087855b1cc5e5639626d0af1530a591))
+
 ## [1.0.3](https://github.com/ctflags/app/compare/v1.0.2...v1.0.3) (2025-11-18)
 
 
