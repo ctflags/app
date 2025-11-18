@@ -64,7 +64,7 @@ Access this URL: [http://localhost:9999/organizer](http://localhost:9999/organiz
 
 ![Admin access](./images/access-admin-1.png)
 
-Login with `Admin`.
+Login as an administrator (using `Admin` password by default) allows you to manage the users, challenges, ...
 
 ![Admin access](./images/access-admin-2.png)
 
