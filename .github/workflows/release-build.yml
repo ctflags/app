@@ -1,0 +1,87 @@
+name: Release and Build
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install semantic-release dependencies
+        run: npm install @semantic-release/changelog @semantic-release/github @semantic-release/git @semantic-release/commit-analyzer @semantic-release/release-notes-generator
+
+      - name: Run semantic-release
+        id: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_CI }}
+        run: |
+          npx semantic-release 2>&1 | tee semantic-release.log
+          
+          # Extract new version from semantic-release output
+          NEW_VERSION=$(grep -oP "Published release \K\d+\.\d+\.\d+" semantic-release.log || echo "")
+          
+          if [[ -n "$NEW_VERSION" ]]; then
+            echo "new_tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "build_needed=true" >> $GITHUB_OUTPUT
+            echo "New release created: v$NEW_VERSION"
+          else
+            echo "build_needed=false" >> $GITHUB_OUTPUT
+            echo "ℹNo release created"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.semantic-release.outputs.build_needed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: steps.semantic-release.outputs.build_needed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.semantic-release.outputs.build_needed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.semantic-release.outputs.new_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            CI_COMMIT_SHA=${{ github.sha }}
+            CI_COMMIT_TAG=${{ steps.semantic-release.outputs.new_tag }}
+            CI_COMMIT_MESSAGE=${{ github.event.head_commit.message }}
+            APP_VERSION=${{ steps.semantic-release.outputs.new_tag }}
+
+      - name: Build summary
+        run: |
+          if [[ "${{ steps.semantic-release.outputs.build_needed }}" == "true" ]]; then
+            echo "✅ Tag ${{ steps.semantic-release.outputs.new_tag }} created and image built"
+          else
+            echo "ℹ️ No new tag created - skipping build"
+          fi
