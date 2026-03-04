@@ -378,10 +378,14 @@
         <div class="leaderboard-controls">
             <div class="controls-header">
                 <h3 class="controls-title">🏆 Participant Leaderboard</h3>
-                <button class="refresh-btn-enhanced" onclick="refreshDashboard()">
-                    <span>🔄</span>
-                    <span>Refresh Data</span>
-                </button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="autoRefreshStatus" style="color: #888; font-size: 0.85em;">Next refresh in <span id="countdown">15</span>s</span>
+                    <button id="autoRefreshToggle" class="refresh-btn-enhanced" onclick="toggleAutoRefresh()" style="background: #555; padding: 8px 14px;">⏸ Pause</button>
+                    <button class="refresh-btn-enhanced" onclick="refreshDashboard()">
+                        <span>🔄</span>
+                        <span>Refresh Data</span>
+                    </button>
+                </div>
             </div>
             
             <div class="controls-content">
@@ -729,6 +733,53 @@
         
         // Update times every 30 seconds
         setInterval(updateRelativeTimes, 30000);
+
+        // ── Auto-refresh ──────────────────────────────────────────────
+        const AUTO_REFRESH_INTERVAL = 15; // seconds — change this to configure
+
+        let autoRefreshEnabled = true;
+        let countdownValue = AUTO_REFRESH_INTERVAL;
+        let countdownTimer = null;
+
+        function updateCountdownDisplay() {
+            const el = document.getElementById('countdown');
+            if (el) el.textContent = countdownValue;
+        }
+
+        function startAutoRefresh() {
+            countdownValue = AUTO_REFRESH_INTERVAL;
+            updateCountdownDisplay();
+            countdownTimer = setInterval(function () {
+                countdownValue--;
+                updateCountdownDisplay();
+                if (countdownValue <= 0) {
+                    countdownValue = AUTO_REFRESH_INTERVAL;
+                    refreshDashboard();
+                }
+            }, 1000);
+        }
+
+        function stopAutoRefresh() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const toggle = document.getElementById('autoRefreshToggle');
+            const status = document.getElementById('autoRefreshStatus');
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+                toggle.innerHTML = '⏸ Pause';
+                status.style.visibility = 'visible';
+            } else {
+                stopAutoRefresh();
+                toggle.innerHTML = '▶ Resume';
+                status.style.visibility = 'hidden';
+            }
+        }
+
+        startAutoRefresh();
 
     </script>
 </body>
