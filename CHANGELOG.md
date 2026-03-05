@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/ctflags/app/compare/v1.0.4...v1.0.5) (2026-03-05)
+
+
+### Bug Fixes
+
+* automatic leaderboard refresh ([9697efb](https://github.com/ctflags/app/commit/9697efb4115f2a8afe530bed3c224e9a328ffd4d))
+
 ## [1.0.4](https://github.com/ctflags/app/compare/v1.0.3...v1.0.4) (2025-11-18)
 
 
