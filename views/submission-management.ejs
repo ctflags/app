@@ -104,11 +104,20 @@
             </form>
         </div>
 
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" style="background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" style="margin-right: 8px;">
+            <label for="selectAll">Select All</label>
+            <button onclick="bulkDelete()" style="background: #ff4444; color: #fff; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">🗑️ Delete Selected</button>
+            <span id="selectedCount" style="margin-left: 20px; color: #888;">0 selected</span>
+        </div>
+
         <!-- Submissions Table -->
         <div class="data-table">
             <table id="submissionsTable">
                 <thead>
                     <tr>
+                        <th>Select</th>
                         <th>ID</th>
                         <th>Participant</th>
                         <th>Challenge</th>
@@ -121,6 +130,7 @@
                 <tbody>
                     <% submissions.forEach(function(submission) { %>
                       <tr data-participant="<%= submission.participant_token %>" data-challenge="<%= submission.challenge_id %>" data-status="<%= submission.is_correct %>">
+                        <td><input type="checkbox" class="row-checkbox" value="<%= submission.id %>" onchange="updateSelectedCount()"></td>
                         <td><%= submission.id %></td>
                         <td><span class="participant-name"><%= submission.participant_name %></span></td>
                         <td><span class="challenge-name"><%= submission.challenge_name %></span></td>
@@ -215,6 +225,48 @@
                 }
             } catch (error) {
                 showResult('error', '❌ Network Error', 'Error deleting submission: ' + error.message);
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const visibleRows = Array.from(document.querySelectorAll('#submissionsTable tbody tr')).filter(row => row.style.display !== 'none');
+            visibleRows.forEach(row => {
+                const checkbox = row.querySelector('.row-checkbox');
+                if (checkbox) checkbox.checked = selectAll;
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checked = Array.from(document.querySelectorAll('.row-checkbox:checked')).filter(cb => cb.closest('tr').style.display !== 'none');
+            document.getElementById('selectedCount').textContent = checked.length + ' selected';
+        }
+
+        async function bulkDelete() {
+            const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
+                .filter(cb => cb.closest('tr').style.display !== 'none')
+                .map(cb => cb.value);
+
+            if (selected.length === 0) {
+                showResult('error', '❌ No Selection', 'Please select submissions to delete.');
+                return;
+            }
+
+            try {
+                const response = await adminUtils.makeRequest('/api/submissions/bulk-delete', {
+                    method: 'DELETE',
+                    body: JSON.stringify({ ids: selected })
+                });
+
+                if (response.ok) {
+                    showResult('success', '✅ Submissions Deleted', `${selected.length} submissions have been deleted successfully.`, true);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting submissions: ' + (error.message || error.error));
+                }
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting submissions: ' + error.message);
             }
         }
 

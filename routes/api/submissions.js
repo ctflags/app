@@ -39,6 +39,16 @@ router.put('/:id', requireOrganizerAuth, validateRequiredFields(['submittedFlag'
   res.json(createSuccessResponse(result.submission, result.message));
 }));
 
+// Bulk delete submissions (must come before /:id)
+router.delete('/bulk-delete', requireOrganizerAuth, asyncHandler(async (req, res) => {
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'ids array required' });
+  }
+  const result = await SubmissionService.bulkDeleteSubmissions(ids);
+  res.json(createSuccessResponse(null, result.message));
+}));
+
 // Delete submission
 router.delete('/:id', requireOrganizerAuth, asyncHandler(async (req, res) => {
   const result = await SubmissionService.deleteSubmission(req.params.id);

@@ -1,4 +1,4 @@
-const { getExistingSolve, createSubmission, getAllSubmissions, getSubmissionById, updateSubmission, deleteSubmission, createSubmissionAdmin, getSubmissionStats } = require('../database/submissions');
+const { getExistingSolve, createSubmission, getAllSubmissions, getSubmissionById, updateSubmission, deleteSubmission, bulkDeleteSubmissions, createSubmissionAdmin, getSubmissionStats } = require('../database/submissions');
 const { getChallengeById } = require('../database/challenges');
 const { getParticipantByToken } = require('../database/participants');
 const { NotFoundError, ConflictError, DatabaseError } = require('../utils/errors');
@@ -159,6 +159,28 @@ class SubmissionService {
       };
     } catch (error) {
       if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
+    }
+  }
+
+  /**
+   * Bulk delete submissions
+   */
+  async bulkDeleteSubmissions(ids) {
+    try {
+      if (!Array.isArray(ids) || ids.length === 0) {
+        throw new ConflictError('Invalid submission IDs provided');
+      }
+
+      const intIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      const result = await bulkDeleteSubmissions(intIds);
+
+      return {
+        deletedCount: result.deletedCount,
+        message: `${result.deletedCount} submissions deleted successfully`
+      };
+    } catch (error) {
+      if (error instanceof ConflictError) throw error;
       throw new DatabaseError(ERROR_MESSAGES.DATABASE_ERROR, error);
     }
   }

@@ -88,6 +88,13 @@ async function deleteSubmission(id) {
   return { id, changes: result.rowCount };
 }
 
+// Bulk delete submissions
+async function bulkDeleteSubmissions(ids) {
+  const pool = getDatabase();
+  const result = await pool.query('DELETE FROM submissions WHERE id = ANY($1::int[])', [ids]);
+  return { deletedCount: result.rowCount };
+}
+
 // Create submission with all details (for admin creation)
 async function createSubmissionAdmin(participantToken, challengeId, submittedFlag, isCorrect) {
   const pool = getDatabase();
@@ -134,6 +141,7 @@ module.exports = {
   getSubmissionById,
   updateSubmission,
   deleteSubmission,
+  bulkDeleteSubmissions,
   createSubmissionAdmin,
   getSubmissionStats
 };
