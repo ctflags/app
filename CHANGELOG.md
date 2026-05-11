@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/ctflags/app/compare/v1.0.7...v1.0.8) (2026-05-11)
+
+
+### Bug Fixes
+
+* capability to delete all the submission at once ([8f13222](https://github.com/ctflags/app/commit/8f13222aa56b8dd363b7222c95e5f3832b0d86f9))
+
 ## [1.0.7](https://github.com/ctflags/app/compare/v1.0.6...v1.0.7) (2026-05-11)
 
 
