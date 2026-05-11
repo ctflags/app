@@ -99,6 +99,13 @@
             </div>
         </div>
 
+        <!-- Files Section -->
+        <div class="files-section">
+            <h3 style="color: #00ff00; margin-top: 0;">📁 Shared Files</h3>
+            <p style="color: #ccc; margin-bottom: 20px;">Download files shared by the organizers for the CTF challenges</p>
+            <div id="participantFileList"></div>
+        </div>
+
         <% challenges.forEach(function(challenge) { %>
           <div class="challenge <%= challenge.solved ? 'solved' : '' %>">
             <div class="challenge-header">
@@ -134,15 +141,6 @@
           </div>
         <% }); %>
 
-        <!-- Files Section -->
-        <div class="files-section">
-            <h3 style="color: #00ff00; margin-top: 0;">📁 Shared Files</h3>
-            <p style="color: #ccc; margin-bottom: 20px;">Download files shared by the organizers for the CTF challenges</p>
-            
-            <div id="participantFileList">
-                <!-- Files will be loaded here -->
-            </div>
-        </div>
     </div>
 
     <!-- Hint Popup -->
