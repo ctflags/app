@@ -1,3 +1,11 @@
+## [1.0.9](https://github.com/ctflags/app/compare/v1.0.8...v1.0.9) (2026-05-11)
+
+
+### Bug Fixes
+
+* make sure data refresh keeps the sorting ([049c6e9](https://github.com/ctflags/app/commit/049c6e94711316aa3deaaea37f18df975c437aa0))
+* use a real config file in compose ([62eb852](https://github.com/ctflags/app/commit/62eb852ee062a11f2493b6470b739ceefd272879))
+
 ## [1.0.8](https://github.com/ctflags/app/compare/v1.0.7...v1.0.8) (2026-05-11)
 
 
