@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/ctflags/app/compare/v1.0.5...v1.0.6) (2026-05-11)
+
+
+### Bug Fixes
+
+* move shared files section to the top ([3d6f532](https://github.com/ctflags/app/commit/3d6f53289ecb815912b8b29d507115735017a8d0))
+
 ## [1.0.5](https://github.com/ctflags/app/compare/v1.0.4...v1.0.5) (2026-03-05)
 
 
