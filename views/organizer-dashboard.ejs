@@ -69,6 +69,68 @@
         .fixed-table th, .fixed-table td { height: inherit; }
         .scrollable-table th, .scrollable-table td { height: inherit; }
         
+        /* Timer widget */
+        .timer-section {
+            background: #2d2d2d;
+            border-radius: 12px;
+            padding: 24px 30px;
+            margin-bottom: 30px;
+            border-left: 4px solid #00aaff;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .timer-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: #00aaff;
+            font-family: monospace;
+            min-width: 180px;
+            letter-spacing: 2px;
+        }
+        .timer-display.warning { color: #ff8c00; }
+        .timer-display.danger  { color: #ff4444; }
+        .timer-display.finished { color: #ff4444; animation: blink 1s step-start infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .timer-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .timer-input {
+            width: 70px;
+            padding: 8px 10px;
+            background: #1a1a1a;
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1em;
+            text-align: center;
+        }
+        .timer-input:focus { outline: none; border-color: #00aaff; }
+        .timer-label { color: #aaa; font-size: 0.9em; }
+        .timer-btn {
+            padding: 9px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95em;
+            transition: opacity 0.2s;
+        }
+        .timer-btn:hover { opacity: 0.85; }
+        .timer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-start  { background: #00aa00; color: #fff; }
+        .btn-stop   { background: #ff8c00; color: #fff; }
+        .btn-reset  { background: #555;    color: #fff; }
+
         /* Sort button styling */
         .sort-btn {
             background: #555;
@@ -371,6 +433,23 @@
                     <button class="nav-btn" onclick="navigateToPage('/organizer/admin')" style="background: #00aa00; color: #fff; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 10px;">⚙️ Admin Panel</button>
                     <button class="logout-btn" onclick="logout()">🚪 Logout</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-section">
+            <div>
+                <div style="color:#aaa; font-size:0.85em; margin-bottom:6px;">WORKSHOP TIMER</div>
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
+            </div>
+            <div class="timer-controls">
+                <div class="timer-input-group">
+                    <input type="number" id="timerMinutes" class="timer-input" value="60" min="1" max="999" title="Duration in minutes">
+                    <span class="timer-label">min</span>
+                </div>
+                <button class="timer-btn btn-start" id="btnStart" onclick="timerAction('start')">▶ Start</button>
+                <button class="timer-btn btn-stop"  id="btnStop"  onclick="timerAction('stop')"  disabled>⏸ Pause</button>
+                <button class="timer-btn btn-reset" id="btnReset" onclick="timerAction('reset')">↺ Reset</button>
             </div>
         </div>
 
@@ -780,6 +859,75 @@
         }
 
         startAutoRefresh();
+
+        // ── Workshop Timer ────────────────────────────────────────────
+        let timerInterval = null;
+        let timerRemaining = 0; // seconds
+        let timerRunning = false;
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timerDisplay');
+            el.textContent = formatTime(timerRemaining);
+            const ratio = timerRemaining / (parseInt(document.getElementById('timerMinutes').value) * 60 || 1);
+            el.className = 'timer-display' +
+                (timerRemaining === 0 && timerRunning === false && timerInterval === null && document.getElementById('btnStop').disabled ? ' finished' :
+                 ratio <= 0.1 ? ' danger' :
+                 ratio <= 0.25 ? ' warning' : '');
+        }
+
+        function timerAction(action) {
+            if (action === 'start') {
+                if (timerRemaining === 0) {
+                    const mins = parseInt(document.getElementById('timerMinutes').value) || 60;
+                    timerRemaining = mins * 60;
+                }
+                timerRunning = true;
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnStop').disabled = false;
+                timerInterval = setInterval(() => {
+                    timerRemaining--;
+                    updateTimerDisplay();
+                    if (timerRemaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                        timerRunning = false;
+                        document.getElementById('btnStart').disabled = false;
+                        document.getElementById('btnStop').disabled = true;
+                        document.getElementById('timerDisplay').className = 'timer-display finished';
+                    }
+                }, 1000);
+            } else if (action === 'stop') {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerRunning = false;
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnStop').disabled = true;
+            } else if (action === 'reset') {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerRunning = false;
+                const mins = parseInt(document.getElementById('timerMinutes').value) || 60;
+                timerRemaining = mins * 60;
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnStop').disabled = true;
+                updateTimerDisplay();
+            }
+            updateTimerDisplay();
+        }
+
+        // Init display from input default
+        timerRemaining = parseInt(document.getElementById('timerMinutes').value) * 60;
+        updateTimerDisplay();
+        document.getElementById('timerMinutes').addEventListener('change', () => {
+            if (!timerRunning) timerAction('reset');
+        });
 
     </script>
 </body>
