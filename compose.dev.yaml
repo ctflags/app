@@ -31,6 +31,7 @@ services:
     volumes:
     - .:/app
     - /app/node_modules
+    - ./config/config.yaml:/app/config/config.yaml
     develop:
       watch:
         - action: sync
