@@ -309,38 +309,31 @@
             );
         }
 
-        function bulkDelete() {
+        async function bulkDelete() {
             const selected = Array.from(document.querySelectorAll('.row-checkbox:checked'))
                 .filter(cb => cb.closest('tr').style.display !== 'none')
                 .map(cb => cb.value);
-            
+
             if (selected.length === 0) {
                 showResult('error', '❌ No Selection', 'Please select hint views to delete.');
                 return;
             }
 
-            popupManager.showTextConfirmation(
-                '⚠️ WARNING: Delete Multiple Hint Views',
-                `This will permanently delete <strong>${selected.length}</strong> selected hint views.<br><br>Type <strong>"DELETE ${selected.length} VIEWS"</strong> to confirm:`,
-                `DELETE ${selected.length} VIEWS`,
-                async () => {
-                    try {
-                        const response = await adminUtils.makeRequest('/api/hint-views/bulk-delete', {
-                            method: 'DELETE',
-                            body: JSON.stringify({ ids: selected })
-                        });
-                        
-                        if (response.ok) {
-                            showResult('success', '✅ Hint Views Deleted', `${selected.length} hint views have been deleted successfully.`, true);
-                        } else {
-                            const error = await response.json();
-                            showResult('error', '❌ Deletion Failed', 'Error deleting hint views: ' + error.message);
-                        }
-                    } catch (error) {
-                        showResult('error', '❌ Network Error', 'Error deleting hint views: ' + error.message);
-                    }
+            try {
+                const response = await adminUtils.makeRequest('/api/hint-views/bulk-delete', {
+                    method: 'DELETE',
+                    body: JSON.stringify({ ids: selected })
+                });
+
+                if (response.ok) {
+                    showResult('success', '✅ Hint Views Deleted', `${selected.length} hint views have been deleted successfully.`, true);
+                } else {
+                    const error = await response.json();
+                    showResult('error', '❌ Deletion Failed', 'Error deleting hint views: ' + error.message);
                 }
-            );
+            } catch (error) {
+                showResult('error', '❌ Network Error', 'Error deleting hint views: ' + error.message);
+            }
         }
 
         function exportData() {

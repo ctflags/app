@@ -185,20 +185,22 @@ class HintService {
         throw new ConflictError('Invalid hint view IDs provided');
       }
 
+      const intIds = ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+
       // Verify all hint views exist
       const { getDatabase } = require('../database');
       const pool = getDatabase();
-      
+
       const checkResult = await pool.query(
-        'SELECT id FROM hint_views WHERE id = ANY($1)',
-        [ids]
+        'SELECT id FROM hint_views WHERE id = ANY($1::int[])',
+        [intIds]
       );
-      
-      if (checkResult.rows.length !== ids.length) {
+
+      if (checkResult.rows.length !== intIds.length) {
         throw new NotFoundError('Some hint views not found');
       }
 
-      const result = await bulkDeleteHintViews(ids);
+      const result = await bulkDeleteHintViews(intIds);
       
       return {
         deletedCount: result.deletedCount,

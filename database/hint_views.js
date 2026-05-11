@@ -168,7 +168,7 @@ async function deleteHintView(id) {
 // Bulk delete hint views
 async function bulkDeleteHintViews(ids) {
   const pool = getDatabase();
-  const result = await pool.query('DELETE FROM hint_views WHERE id = ANY($1)', [ids]);
+  const result = await pool.query('DELETE FROM hint_views WHERE id = ANY($1::int[])', [ids]);
   return { deletedCount: result.rowCount };
 }
 
