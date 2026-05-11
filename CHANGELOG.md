@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/ctflags/app/compare/v1.0.6...v1.0.7) (2026-05-11)
+
+
+### Bug Fixes
+
+* removal of all hints views ([9adcca9](https://github.com/ctflags/app/commit/9adcca9b66ec04269e484c67812338f087502f7c))
+
 ## [1.0.6](https://github.com/ctflags/app/compare/v1.0.5...v1.0.6) (2026-05-11)
 
 
