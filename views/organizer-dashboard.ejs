@@ -694,7 +694,8 @@
             
             // Update participant table
             updateParticipantTable(data.participants, data.challenges, data.progressMatrix);
-            
+            sortTable(currentSort);
+
             // Update relative times
             updateRelativeTimes();
         }
@@ -750,8 +751,12 @@
             });
         }
         
+        // Persisted sort preference
+        let currentSort = 'name';
+
         // Sort table function
         function sortTable(sortBy) {
+            currentSort = sortBy;
             const fixedTbody = document.querySelector('.fixed-table tbody');
             const scrollableTbody = document.querySelector('.scrollable-table tbody');
             
